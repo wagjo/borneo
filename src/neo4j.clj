@@ -42,6 +42,7 @@
     (proxy [StopEvaluator] []
       (isStopNode [#^TraversalPosition pos]
                   (== (.depth pos) d)))))
+
 (def end-of-graph StopEvaluator/END_OF_GRAPH)
 
 (def all ReturnableEvaluator/ALL)
@@ -88,7 +89,20 @@
 (defn relate [#^Node from #^Keyword type #^Node to]
   (.createRelationshipTo from to (relationship type)))
 
+(defn new-child-node
+  "Creates a node that is a child of the specified parent node along
+  the specified relationship.  props is a map that defines the
+  properties of the node."
+  [parentnode relkey props]
+  (let [node (new-node)]
+    (relate parentnode relkey node)
+    (properties node props)
+    node))
+
 (defn return-if [f]
+  "Creates a ReturnableEvaluator for use with a traverser. Takes a
+  function of one argument. The function will be passed the current
+  position to act on."
   (proxy [ReturnableEvaluator] []
     (isReturnableNode [#^TraversalPosition p] (f p))))
 
@@ -123,20 +137,64 @@
 
 (defn traverse
   "Traverse the graph.  Starting at the given node, traverse the graph
-in either bread-first or depth-first order, stopping when the stop-fn returns
-true.  The filter-fn should return true for any node reached during the traversal
-that is to be returned in the sequence.  The map of relationships and directions
-is used to decide which edges to traverse."
-  [#^Node start-node order stop-evaluator return-evaluator relationship-direction]
+  in either bread-first or depth-first order, stopping when the
+  stop-fn returns true.  The filter-fn should return true for any node
+  reached during the traversal that is to be returned in the sequence.
+  The map of relationships and directions is used to decide which
+  edges to traverse."
+  [#^Node start-node order stop-evaluator return-evaluator
+   relationship-direction]
   (.getAllNodes (.traverse start-node 
                            order
                            stop-evaluator
                            return-evaluator
-                           (into-array Object (mapcat identity (map (fn [[k v]] 
-                                                                      [(relationship k) v]) 
-                                                                    relationship-direction))))))
+                           (into-array
+			    Object
+			    (mapcat identity (map (fn [[k v]] 
+						    [(relationship k) v]) 
+						  relationship-direction))))))
+
 (defn lookup
   "Inside a transation, looks up nodes by index key for the given index."
   [idx & ids]
   (doall (map (fn [k] (.getSingleNodeFor idx k)) 
               ids)))
+
+
+(defn new-props-evaluator
+  "Creates a ReturnableEvaluator for use with a traverser that returns
+  nodes that match the specified property values. propmap is a map that
+  defines key value pairs that should ReturnableEvaluator should match
+  on."
+  [propmap]
+  
+  (return-if
+   (fn [currentPos]
+     (let [node (.currentNode currentPos)
+	   nodeprops (properties node)
+	   ks (keys propmap)
+	   nks (count ks)]
+       (cond
+	(== nks 0) false
+	(== nks 1) (and (contains? nodeprops (first ks))
+			(= (get nodeprops (first ks))
+			   (get propmap (first ks))))
+	:else 
+	(let [propcomp (fn [key] (= (get nodeprops key) (get propmap key)))]
+	  (and (reduce #(and (contains? nodeprops %1)
+			     (contains? nodeprops %2))
+		       ks)
+	       (reduce #(and (propcomp %1) (propcomp %2)) ks))))))))
+
+
+(defn find-by-props
+  "Finds a node by traversing outward from start-node along
+  relationship relkey.  The function looks for nodes with property
+  values matching the key value pairs in propmap."
+  [start-node relkey propmap]
+  (traverse start-node
+	      breadth-first
+	      end-of-graph
+	      (new-props-evaluator propmap)
+	      {relkey outgoing}))
+
