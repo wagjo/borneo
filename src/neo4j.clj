@@ -111,7 +111,8 @@
     (isStopNode [#^TraversalPosition p] (f p))))
 
 (defn property
-  "Necessary?  Maybe remove it in favor of properties."
+  "DEPRECATED.  Prefer properties."
+  {:deprecated "0.3.0"}
   ([#^PropertyContainer c key]
      (.getProperty c (name key)))
   ([#^PropertyContainer c key val]
@@ -126,6 +127,31 @@
      (doseq [[k v] props]
        (.setProperty c (name-or-str k) (or v "")))
      nil))
+
+(defn map-node
+  "Takes a node and exposes its properties as a map. The node itself
+  will be an entry in the map keyed with :node.  If a value is already
+  at :node, it will be replaced by the refernece to the node itself."
+  [#^Node n]
+  (assoc (properties n) :node n))
+
+(defn node-seq
+  "Takes a sequence of nodes and creates a lazy sequence that converts
+  each node to a map using map-node."
+  [seq]
+  (map map-node seq))
+
+(defn update-mapped-node
+  "Upates a node in the Neo4j database that has been mapped with
+  map-node. Compares the values of the map to the values stored in the
+  mapped node. Any values that have changed will be updated in the
+  database."
+  [mapped-node]
+  (let [node (:node mapped-node)]
+    (doseq [k (keys (properties node))]
+      (when-not (= (get mapped-node k) (get node k))
+	(.setProperty node (name-or-str k) (or (get mapped-node k) ""))))
+    mapped-node))
 
 (defn node-delete 
   "Delete the given node."
@@ -145,10 +171,10 @@
   [#^Node start-node order stop-evaluator return-evaluator
    relationship-direction]
   (.getAllNodes (.traverse start-node 
-                           order
-                           stop-evaluator
-                           return-evaluator
-                           (into-array
+			   order
+			   stop-evaluator
+			   return-evaluator
+			   (into-array
 			    Object
 			    (mapcat identity (map (fn [[k v]] 
 						    [(relationship k) v]) 
