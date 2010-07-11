@@ -135,7 +135,7 @@
   [#^Node n]
   (assoc (properties n) :node n))
 
-(defn node-seq
+(defn map-node-seq
   "Takes a sequence of nodes and creates a lazy sequence that converts
   each node to a map using map-node."
   [seq]
