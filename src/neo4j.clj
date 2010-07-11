@@ -139,7 +139,7 @@
   "Takes a sequence of nodes and creates a lazy sequence that converts
   each node to a map using map-node."
   [seq]
-  (map map-node seq))
+  (map #(with-tx (map-node %)) seq))
 
 (defn update-mapped-node
   "Upates a node in the Neo4j database that has been mapped with
