@@ -89,16 +89,6 @@
 (defn relate [#^Node from #^Keyword type #^Node to]
   (.createRelationshipTo from to (relationship type)))
 
-(defn new-child-node
-  "Creates a node that is a child of the specified parent node along
-  the specified relationship.  props is a map that defines the
-  properties of the node."
-  [parentnode relkey props]
-  (let [node (new-node)]
-    (relate parentnode relkey node)
-    (properties node props)
-    node))
-
 (defn return-if [f]
   "Creates a ReturnableEvaluator for use with a traverser. Takes a
   function of one argument. The function will be passed the current
@@ -153,13 +143,58 @@
 	(.setProperty node (name-or-str k) (or (get mapped-node k) ""))))
     mapped-node))
 
+;; Should cond-mapped have an :else?
+(defmacro cond-mapped
+  "Tests to see if n is a mapped node. If so, executes mappedexp. If n
+  is a regular node, nodeexp is executed."
+  [n mappedexp nodeexp]
+  `(cond
+    (map? ~n)
+    ~mappedexp
+
+    (isa? (class ~n) Node)
+    ~nodeexp))
+
+(defn new-child-node
+  "Creates a node that is a child of the specified parent node along
+  the specified relationship.  props is a map that defines the
+  properties of the node."
+  [parentnode relkey props]
+  (cond-mapped parentnode
+	       (new-child-node (:node parentnode) relkey props)
+	       (let [node (new-node)]
+		 (relate parentnode relkey node)
+		 (properties node props)
+		 node)))
+
 (defn node-delete 
   "Delete the given node."
-  [#^Node n]
-  (if-let [rs (.getRelationships n)]
-    (doseq [r rs]
-      (.delete r)))
-  (.delete n))
+  [n]
+  (cond-mapped n
+	       (node-delete (:node n))
+	       (do
+		(if-let [rs (.getRelationships n)]
+		  (doseq [r rs]
+		    (.delete r)))
+		(.delete n))))
+
+(defn relationships
+  "Returns all the relationships attached to this node."
+  ([#^Node n #^Direction d] (.getRelationships n d))
+  ([#^Node n #^Keyword type #^Direction d]
+     (.getRelationships n (relationship type) d))
+  ([n]
+     (cond-mapped n
+		  (relationships (:node n))
+		  (.getRelationships n))))
+
+(defn single-relationship
+  "Returns the only relationship for the node of the given type and
+  direction."
+  [n type dir]
+  (cond-mapped n
+	       (single-relationship (:node n) type dir)
+	       (.getSingleRelationship n (relationship type) dir)))
 
 (defn traverse
   "Traverse the graph.  Starting at the given node, traverse the graph
