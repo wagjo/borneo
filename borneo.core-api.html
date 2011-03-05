@@ -1,0 +1,458 @@
+<html>
+  <head>
+    <title>borneo.core - borneo nil API documentation</title>
+    <link href="static/favicon.png" rel="icon" />
+    <link href="static/favicon.png" rel="shortcut icon" />
+    <link media="all" type="text/css" href="static/clojure.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/wiki.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/internal.css" rel="stylesheet" />
+    <!-- TODO: are we using these (from clojure.org)? If so, add the files -->
+    <script src="file/view/code_highlighter.js" type="text/javascript"></script>
+    <script src="file/view/clojure.js" type="text/javascript"></script>
+    <style>.menuWrapper{height: 36px;}</style>
+    <!--[if lte IE 6]>
+    <link rel="stylesheet" href="http://www.wikispaces.com/_/2009051601/s/internal_ie.css" type="text/css" />
+    <![endif]-->
+  </head>
+<!--
+This document was auto-generated from the source by the clojure autodoc system.
+To report errors or ask questions about the overall documentation structure, formatting,
+etc., contact Tom Faulhaber (google mail name: tomfaulhaber).
+For errors in the documentation of a particular namespace, contact the author of that
+namespace.
+-->
+  <body>
+    <div id="AllContentContainer">
+      <div id="Header">
+	<a id="Logo" href="index.html"><img alt="Clojure" height="100" width="100" src="static/clojure-icon.gif" /></a>
+	<h1><a title="page header title" id="page-header" href="index.html">borneo</a></h1>
+      </div>
+      <div id="leftcolumn"><div style="text-align: center;"></div>
+<div class="menu">
+  <div class="WikiCustomNav WikiElement wiki">
+    <span class="toc-header"><span id="project-name">borneo</span> <span id="version"></span> API</span><br />
+    <ul>
+      <li><a class="wiki_link" href="index.html">Overview</a></li>
+      <li><a class="wiki_link" href="api-index.html">API Index</a></li>
+    </ul>
+    <span class="toc-header">Namespaces</span>
+    <ul id="left-sidebar-list">
+      <li><a href="borneo.core-api.html" class="wiki_link">borneo.core</a></li>
+    </ul>
+    
+    <a href="http://clojure.org" class="wiki_link">Clojure Home</a>
+  </div>
+</div>
+</div>
+      <div id="rightcolumn">
+	<div id="Content">
+	  <div class="contentBox"><div class="innerContentBox">
+              <div id="content_view" class="wiki wikiPage">
+                <div id="right-sidebar"><div id="toc">
+  <h1 class="nopad">Table of Contents</h1>
+  <div style="margin-left: 1em;" class="toc-section">
+    <a href="#toc0">Overview</a>
+    <div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/create-child!">create-child!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/create-node!">create-node!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/create-rel!">create-rel!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/delete!">delete!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/delete-node!">delete-node!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/go">go</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/id">id</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/nodes">nodes</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/other">other</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/prop?">prop?</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/props">props</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/rel-type">rel-type</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/rel?">rel?</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/rels">rels</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/root">root</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/set-prop!">set-prop!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/set-props!">set-props!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/single-rel">single-rel</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/traverse">traverse</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/with-db!">with-db!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/with-tx">with-tx</a>
+    </div>
+    <br />
+  </div>
+</div>
+</div>
+                <div id="content-tag"><h1 id="overview">API for <span id="namespace-name">borneo.core</span>
+  - <span id="header-project">borneo</span> <span id="header-version"></span> (<span id="header-status"></span>)
+  </h1>
+
+<br />Usage:
+<pre>
+(ns your-namespace
+  (:require <span id="long-name">borneo.core</span>))
+</pre><pre>
+</pre><h2>Overview</h2>
+<pre id="namespace-docstr">Wrapper for Neo4j. Because I was not happy with the current state
+(01/2011) of existing Neo4j wrappers for clojure, I've decided to
+create my own.
+
+Purpose of this library is to provide intiutive access to commonly used
+Neo4j operations. It uses official Neo4j Java bindings. It does not
+use Blueprints interface.
+
+See README for usage instructions, documentation and examples.
+
+Code notes:
+- neo-db holds the current db instance, so that users do not have
+  to supply db instance at each call to db operations. This
+  approach has of course its drawbacks (e.g. only one connection at
+  time), but I've found it suitable for my purposes.</pre>
+
+
+<br />
+<h2>Public Variables and Functions</h2>
+<div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/create-child!">create-child!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (create-child! type props)
+       (create-child! node type props)
+</pre>
+  <pre id="var-docstr">Creates a node that is a child of the specified parent node
+(or root node) along the specified relationship.
+props is a map that defines the properties of the node.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L425" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/create-node!">create-node!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (create-node!)
+       (create-node! props)
+</pre>
+  <pre id="var-docstr">Creates a new node.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L414" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/create-rel!">create-rel!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (create-rel! from type to)
+</pre>
+  <pre id="var-docstr">Create relationship of a supplied type between from and to nodes.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L333" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/delete!">delete!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (delete! item)
+</pre>
+  <pre id="var-docstr">Deletes node or relationship.
+Only node which has no relationships attached to it can be deleted.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L244" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/delete-node!">delete-node!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (delete-node! node)
+</pre>
+  <pre id="var-docstr">Delete node and all its relationships.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L438" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/go">go</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (go node &amp; types)
+</pre>
+  <pre id="var-docstr">Walk through the graph by following specified relations. Returns last node.
+Throws NullPointerException if path is wrong.
+Throws NotFoundException if path is ambiguous.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L464" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/id">id</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (id item)
+</pre>
+  <pre id="var-docstr">Returns id for a given node or relationship</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L239" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/nodes">nodes</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (nodes r)
+</pre>
+  <pre id="var-docstr">Returns the two nodes attached to the given relationship.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L340" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/other">other</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (other r node)
+</pre>
+  <pre id="var-docstr">Returns other node for given relationship.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L345" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/prop?">prop?</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (prop? c k)
+</pre>
+  <pre id="var-docstr">Returns true if given node or relationship contains
+property with a given key</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L357" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/props">props</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (props c)
+</pre>
+  <pre id="var-docstr">Return map of properties for a given node or relationship.
+Fetches all properties and can be very resource consuming if node
+contains many large properties</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L365" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/rel-type">rel-type</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rel-type r)
+</pre>
+  <pre id="var-docstr">Returns type of given relationship.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L350" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/rel?">rel?</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rel? node)
+       (rel? node type-or-types)
+       (rel? node type direction)
+</pre>
+  <pre id="var-docstr">Returns true if there are relationships attached to this node. Syntax:
+[node]                - All relationships
+[node type-or-types]  - Relationships of any of specified types with
+                        any direction
+[node type direction] - Relationships of specified type and
+                        of specified direction. You can supply nil for
+                        one of the arguments if you do not care for
+                        either direction of relationship type
+Valid directions are :in :out and :both, parameter type can be any keyword.
+Examples: (rel? node)                  ; All rels
+          (rel? node :foo)             ; Rels of :foo type of any direction
+          (rel? node [:foo :bar :baz]) ; Rels of any of specified types,
+                                       ; any directions
+          (rel? node :foo :in)         ; Rels of :foo type, :in direction
+          (rel? node nil :in)          ; Rels of any type of :in direction
+          (rel? node :foo nil)         ; Use (rel? node :foo) instead</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L266" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/rels">rels</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rels node)
+       (rels node type-or-types)
+       (rels node type direction)
+</pre>
+  <pre id="var-docstr">Returns all relationships attached to this node. Syntax:
+[node]                - All relationships
+[node type-or-types]  - Relationships of any of specified types with
+                        any direction
+[node type direction] - Relationships of specified type and
+                        of specified direction. You can supply nil for
+                        one of the arguments if you do not care for
+                        either direction of relationship type
+Valid directions are :in :out and :both, parameter type can be any keyword.
+Examples: (rels node)                  ; All rels
+          (rels node :foo)             ; Rels of :foo type of any direction
+          (rels node [:foo :bar :baz]) ; Rels of any of specified types,
+                                      ; any directions
+          (rels node :foo :in)         ; Rels of :foo type, :in direction
+          (rels node nil :in)          ; Rels of any type of :in direction
+          (rels node :foo nil)         ; Use (rel node :foo) instead</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L295" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/root">root</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (root)
+</pre>
+  <pre id="var-docstr">Returns reference/root node.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L409" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/set-prop!">set-prop!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (set-prop! c key)
+       (set-prop! c key value)
+</pre>
+  <pre id="var-docstr">Sets or remove property for a given node or relationship.
+The property value must be one of the valid property types (see Neo4j docs).
+If a property value is nil, removes this property from the given
+node or relationship.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L378" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/set-props!">set-props!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (set-props! c props)
+</pre>
+  <pre id="var-docstr">Sets properties for a given node or relationship.
+The property value must be one of the valid property types (see Neo4j docs).
+If a property value is nil, removes this property from the given
+node or relationship.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L396" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/single-rel">single-rel</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (single-rel node type)
+       (single-rel node type direction)
+</pre>
+  <pre id="var-docstr">Returns the only relationship for the node of the given type and
+direction.
+Valid directions are :in :out and :both, defaults to :out</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L324" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/traverse">traverse</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (traverse node rel)
+       (traverse node return-eval rel)
+       (traverse node stop-eval return-eval rel)
+       (traverse node order stop-eval return-eval rel)
+</pre>
+  <pre id="var-docstr">Traverse the graph. Starting at the given node, traverse the graph
+in specified order, stopping based on stop-eval. The return-eval
+decides which nodes make it into the result. The rel is used to
+decide which edges to traverse.
+order - :breadth, :depth. Will be :depth if nil supplied.
+stop-eval accepts following values:
+  - :end or nil - end of graph
+  - :1, :2, :X (X being any positive integer) - depth of X
+  - Custom function which takes one argument, current position
+    and should return true when at stop node.
+return-eval accepts following values:
+  - :all-but-start or nil  - all but start nodes
+  - :all - all nodes
+  - Custom function which takes one argument, current position map
+    and should return true when node at current position should be returned.
+  - Map defining key-value pairs that will be matched against
+    properties of wanna-be returned nodes.
+rel - a keyword representing relation type or a map where keys are
+      relation type keywords and values are directions (:in or :out)</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L473" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/with-db!">with-db!</h2>
+  <span id="var-type">macro</span><br />
+  <pre id="var-usage">Usage: (with-db! path &amp; body)
+</pre>
+  <pre id="var-docstr">Establish a connection to the neo db.
+Because there is an overhead when establishing connection, users should
+not call this macro often. Also note that this macro is not threadsafe.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L214" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/with-tx">with-tx</h2>
+  <span id="var-type">macro</span><br />
+  <pre id="var-usage">Usage: (with-tx &amp; body)
+</pre>
+  <pre id="var-docstr">Establish a transaction. Use it for mutable db operations.
+If you do not want to commit it, throw an exception.</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/3802816626e2a8ca4ced3d865c514c60c4a7650b/src/borneo/core.clj#L228" id="var-source">Source</a>
+</div>
+
+
+</div>
+              </div>
+            </div>
+          </div>
+	</div>
+	<div id="foot">
+	  <div style="text-align: center;" id="copyright">Copyright (C) 2011, Jozef Wagner. All rights reserved.</div>
+	</div>
+      </div>
+      <div id="DesignedBy">Logo &amp; site design by <a title="Visit Tom Hickey's website." href="http://www.tomhickey.com">Tom Hickey</a>.<br />
+      Clojure auto-documentation system by Tom Faulhaber.</div>
+    </div>
+    <!-- /AllContentContainer -->
+  </body>
+
+</html>
