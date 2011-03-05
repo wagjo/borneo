@@ -20,7 +20,8 @@
 (ns borneo.core
   "Clojure wrapper for Neo4j, a graph database.
 
-  See README for usage instructions, documentation and examples.
+  See project page (http://github.com/wagjo/borneo) for usage instructions,
+  documentation and examples.
 
   Code notes:
   - Using official Neo4j bindings
