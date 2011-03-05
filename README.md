@@ -16,7 +16,9 @@ Add the following dependency to your project.clj file:
 
 Detailed API docs are at [http://wagjo.github.com/borneo/](http://wagjo.github.com/borneo/)
 
-Quick overview of available functions (most important ones are emphasized):
+Quick overview of available functions (most important ones are
+emphasized):
+
 * _Database management_
   * ___[with-db!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-db!)_ - establish a connection to the database__
   * ___[with-tx](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-tx)_ - establish a transaction__
