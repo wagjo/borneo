@@ -1,40 +1,62 @@
-The borneo project provides a more lispy interface to Neo4j, a graph-structured on-disk transactional database.
+# borneo
 
-This library is under active development and there's plenty more work to do.
+Wrapper for Neo4j, a graph database.
 
-Wrapper for Neo4j. Because I was not happy with the current state
-(01/2011) of existing Neo4j wrappers for clojure, I've decided to
-create my own.
+Because I was not happy with the current state (01/2011) of existing
+Neo4j wrappers for clojure, I've decided to create my own.
 
-Purpose of this ns is to provide intiutive access to commonly used
+Purpose of this library is to provide intiutive access to commonly used
 Neo4j operations. It uses official Neo4j Java bindings. It does not
 use Blueprints interface.
 
-Disclaimer: I have forked hgavin/clojure-neo4j and modified it
-heavily.
+## Usage
 
-Disclaimer: Some comments and docs are taken from official Neo4j javadocs.
+Add the following dependency to your project.clj file:
 
-# Usage:
+    [borneo "0.1.0-SNAPSHOT"]
+
+## Documentation
+
+* API docs are at http://wagjo.github.com/borneo/
 
 * use with-db! to establish a connection to the database
 
 * all db operations must be inside with-db! body
 
-# Code notes:
+* TODO
 
-*   *neo-db* holds the current db instance, so that users do not have
-    to supply db instance at each call to db operations. This
-    approach has of course its drawbacks (e.g. only one connection at
-    time), but I've found it suitable for my purposes.
+## Examples
 
-# Examples:
+    (ns foo.example
+      (:require [borneo.core :as neo]))
 
-(ns foo.example
-  (:require [borneo.core :as neo]))
+    (neo/with-neo "/path/to/db"
 
-(neo/with-neo "/path/to/db"
+      TODO
 
+    )
 
+## Contact
 
-)
+* http://github.com/wagjo
+
+* http://www.google.com/profiles/jozef.wagner
+
+## License
+
+Disclaimer: Forked from hgavin/clojure-neo4j
+
+Disclaimer: Small amount of comments and docs are based on official
+Neo4j javadocs. 
+
+Copyright (C) 2011, Jozef Wagner. All rights reserved.
+
+The use and distribution terms for this software are covered by the
+Eclipse Public License 1.0 (http://opensource.org/licenses/eclipse-1.0.php)
+which can be found in the file epl-v10.html at the root of this 
+distribution.
+
+By using this software in any fashion, you are agreeing to be bound by
+the terms of this license.
+
+You must not remove this notice, or any other, from this software.

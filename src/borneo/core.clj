@@ -1,8 +1,38 @@
 ;; Copyright (C) 2011, Jozef Wagner. All rights reserved.
-;; This ns is forked from hgavin/clojure-neo4j
+;;
+;; Disclaimer: Forked from hgavin/clojure-neo4j
+;; 
+;; Disclaimer: Small amount of comments and docs are based on official
+;; Neo4j javadocs. 
+;;
+;; The use and distribution terms for this software are covered by the 
+;; Eclipse Public License 1.0
+;; (http://opensource.org/licenses/eclipse-1.0.php) which can be found
+;; in the file epl-v10.html at the root of this distribution.
+;;
+;; By using this software in any fashion, you are agreeing to be bound
+;; by the terms of this license.
+;;
+;; You must not remove this notice, or any other, from this software.
+;;
+;; Forked from hgavin/clojure-neo4j
 
 (ns borneo.core
-  "Neo4j wrapper, forked from hgavin/clojure-neo4j"
+  "Wrapper for Neo4j. Because I was not happy with the current state
+  (01/2011) of existing Neo4j wrappers for clojure, I've decided to
+  create my own.
+
+  Purpose of this library is to provide intiutive access to commonly used
+  Neo4j operations. It uses official Neo4j Java bindings. It does not
+  use Blueprints interface.
+
+  See README for usage instructions, documentation and examples.
+
+  Code notes:
+  - neo-db holds the current db instance, so that users do not have
+    to supply db instance at each call to db operations. This
+    approach has of course its drawbacks (e.g. only one connection at
+    time), but I've found it suitable for my purposes."
   (:import (org.neo4j.graphdb Direction
                               Node
                               PropertyContainer
@@ -16,48 +46,29 @@
                               Traverser$Order)
 	   (org.neo4j.kernel EmbeddedGraphDatabase)))
 
-;; Wrapper for Neo4j. Because I was not happy with the current state
-;; (01/2011) of existing Neo4j wrappers for clojure, I've decided to
-;; create my own.
-;;
-;; Purpose of this ns is to provide intiutive access to commonly used
-;; Neo4j operations. It uses official Neo4j Java bindings. It does not
-;; use Blueprints interface.
-;;
-;; Disclaimer: I have forked hgavin/clojure-neo4j and modified it
-;; heavily.
-;;
-;; Disclaimer: Some comments and docs are taken from official Neo4j javadocs.
-;;
-;;; Usage:
-;; - use with-db! to establish a connection to the database
-;; - all db operations must be inside with-db! body
-;;
-;;; Code notes:
-;; - *neo-db* holds the current db instance, so that users do not have
-;;   to supply db instance at each call to db operations. This
-;;   approach has of course its drawbacks (e.g. only one connection at
-;;   time), but I've found it suitable for my purposes.
 
 ;;;; Implementation details
 
 (defonce ^{:private true
            :doc "Holds the current database instance"
            :tag EmbeddedGraphDatabase}
-  *neo-db* nil)
+  neo-db nil)
 
-(defn- array? [x]
+(defn- array?
   "Determine whether x is an array or not"
+  [x]
   (-> x class .isArray))
 
-(defn- name-or-str [x]
+(defn- name-or-str
   "If x is keyword, returns its name. If not, stringify the value"
+  [x]
   (if (keyword? x) 
     (name x) 
     (str x)))
 
-(defn- process-position [^TraversalPosition p]
+(defn- process-position
   "Translate TraversalPosition into a map"
+  [^TraversalPosition p]
   {:pos p
    :node (.currentNode p)
    :depth (.depth p)
@@ -67,57 +78,63 @@
    ;; :prev-node (.previousNode p)
    :count (.returnedNodesCount p)})
 
-(defn- ^RelationshipType rel-type* [k]
+(defn- ^RelationshipType rel-type*
   "Create java class implementing RelationshipType. Used for interop.
   TODO: Should we cache these instances to save memory?
   Or will they be GCd?"
+  [k]
   (proxy [RelationshipType] []
     (name [] (name k))))
 
-(defn- ^Direction rel-dir [k]
+(defn- ^Direction rel-dir
   "Translates keyword to the respective relationship direction.
   Valid values are :out :in and :both
   See javadoc for Direction for more info on directions"
+  [k]
   (condp = k
       :out Direction/OUTGOING
       :in Direction/INCOMING
       :both Direction/BOTH
       (throw (IllegalArgumentException.))))
 
-(defn- rel-dir-map [r]
+(defn- rel-dir-map
   "Constructs an array or relation types and directions. Accepts
   map consisting of relation type keywords as keys and
   relation directions keywords (:in or :out) as values.
   r canalso be a single keyword; in that case, a default :out will
   be added to the array."
+  [r]
   (if (keyword? r)
     (rel-dir-map {r :out})   
     (into-array Object
                 (mapcat (fn [[k v]] [(rel-type* k) (rel-dir v)])
                         r))))
 
-(defn- order* [o]
+(defn- order*
   "Translates keyword to the respective traverser order.
   Valid values are :breadth, :depth and nil (will be :depth)
   See javadoc for Traverser for more info in orders."
+  [o]
   (cond
    (= o :breadth) Traverser$Order/BREADTH_FIRST
    (or (= o :depth) (nil? o)) Traverser$Order/DEPTH_FIRST
    :else (throw (IllegalArgumentException.))))
 
-(defn- stop-if [f]
+(defn- stop-if
   "Custom StopEvaluator, f should return true when at stop node. f takes one
   argument. The function will be passed the current position map to act on."
+  [f]
   (proxy [StopEvaluator] []
     (isStopNode [^TraversalPosition p] (f (process-position p)))))
 
-(defn- depth-of [d]
+(defn- depth-of
   "Return a StopEvaluator for the given traversal depth."
+  [d]
   (if (== d 1) 
     StopEvaluator/DEPTH_ONE
     (stop-if #(== (:depth %) d))))
 
-(defn- stop-evaluator [e]
+(defn- stop-evaluator
   "Translates value to the respective stop evaluator.
   Valid values are:
     - :end or nil - end of graph
@@ -130,29 +147,32 @@
             (stop-evaluator nil)
             (stop-evaluator custom-fn)
   See javadoc for StopEvaluator for more info."
+  [e]  
   (cond
    (or (= :end e) (nil? e)) StopEvaluator/END_OF_GRAPH
    (keyword? e) (depth-of (Integer/parseInt (name e)))
    (fn? e) (stop-if e)))
 
-(defn- return-if [f]
+(defn- return-if
   "Custom ReturnableEvaluator, f should return true if node at current
   position should be returned. Takes a function of one argument.
   The function will be passed the current position map to act on."
+  [f]
   (proxy [ReturnableEvaluator] []
     (isReturnableNode [^TraversalPosition p] (f (process-position p)))))
 
-(defn- return-by-props [props]
+(defn- return-by-props
   "Creates a ReturnableEvaluator for use with a traverser that returns
   nodes that match the specified property values. propmap is a map that
   defines key value pairs that ReturnableEvaluator should match on."
+  [props]
   (return-if
    (fn [pos]
      (let [^Node node (:node pos)
            check-prop (fn [[k v]] (= v (.getProperty node (name-or-str k) nil)))]
        (every? check-prop props)))))
 
-(defn- return-evaluator [e]
+(defn- return-evaluator
   "Translates value to the respective return evaluator.
   Valid values are:
     - :all-but-start or nil  - all but start nodes
@@ -167,31 +187,35 @@
             (return-evaluator custom-fn)
             (return-evaluator {:uid \"johndoe1\"})
   See javadoc for ReturnEvaluator for more info."
+  [e]
   (cond
    (or (= :all-but-start e) (nil? e)) ReturnableEvaluator/ALL_BUT_START_NODE
    (= :all e) ReturnableEvaluator/ALL
    (map? e) (return-by-props e)
    (fn? e) (return-if e)))
 
-(defn- start! [path]
+(defn- start!
   "Establish a connection to the database.
-  Uses *neo-db* to hold the connection."
+  Uses neo-db Var to hold the connection."
+  [path]
   (io!)
   (let [n (EmbeddedGraphDatabase. path)]
-    (alter-var-root #'*neo-db* (fn [_] n))))
+    (alter-var-root #'neo-db (fn [_] n))))
 
-(defn- stop! []
-  "Closes a connection stored in *neo-db*"
+(defn- stop!
+  "Closes a connection stored in neo-db"
+  []
   (io!)
-  (.shutdown *neo-db*))
+  (.shutdown neo-db))
 
 
 ;;;; Public API
 
-(defmacro with-db! [path & body]
+(defmacro with-db!
   "Establish a connection to the neo db.
   Because there is an overhead when establishing connection, users should
   not call this macro often. Also note that this macro is not threadsafe."
+  [path & body]
   (io!)
   `(do
      ;; Not using binding macro, because db should be accessible
@@ -201,23 +225,26 @@
        ~@body
        (finally (stop!)))))
 
-(defmacro with-tx [& body]
+(defmacro with-tx
   "Establish a transaction. Use it for mutable db operations.
   If you do not want to commit it, throw an exception."
-  `(let [tx# (.beginTx *neo-db*)]
+  [& body]
+  `(let [tx# (.beginTx neo-db)]
      (try
        (let [val# (do ~@body)]
          (.success tx#)
          val#)
        (finally (.finish tx#)))))
 
-(defn id [item]
+(defn id
   "Returns id for a given node or relationship"
+  [item]
   (.getId item))
 
-(defn delete! [item]
+(defn delete!
   "Deletes node or relationship.
   Only node which has no relationships attached to it can be deleted."
+  [item]
   (io!)
   (with-tx
     (.delete item)))
@@ -275,13 +302,13 @@
                           one of the arguments if you do not care for
                           either direction of relationship type
   Valid directions are :in :out and :both, parameter type can be any keyword.
-  Examples: (rel node)                  ; All rels
-            (rel node :foo)             ; Rels of :foo type of any direction
-            (rel node [:foo :bar :baz]) ; Rels of any of specified types,
+  Examples: (rels node)                  ; All rels
+            (rels node :foo)             ; Rels of :foo type of any direction
+            (rels node [:foo :bar :baz]) ; Rels of any of specified types,
                                         ; any directions
-            (rel node :foo :in)         ; Rels of :foo type, :in direction
-            (rel node nil :in)          ; Rels of any type of :in direction
-            (rel node :foo nil)         ; Use (rel node :foo) instead"
+            (rels node :foo :in)         ; Rels of :foo type, :in direction
+            (rels node nil :in)          ; Rels of any type of :in direction
+            (rels node :foo nil)         ; Use (rel node :foo) instead"
   ([^Node node]
      (.getRelationships node))
   ([^Node node type-or-types]
@@ -303,37 +330,43 @@
   ([^Node node type direction]
      (.getSingleRelationship node (rel-type* type) (rel-dir direction))))
 
-(defn create-rel! [^Node from type ^Node to]
+(defn create-rel!
   "Create relationship of a supplied type between from and to nodes."
+  [^Node from type ^Node to]
   (io!)
   (with-tx
     (.createRelationshipTo from to (rel-type* type))))
 
-(defn nodes [^Relationship r]
+(defn nodes
   "Returns the two nodes attached to the given relationship."
+  [^Relationship r]
   (.getNodes r))
 
-(defn other [^Relationship r ^Node node]
-  "Returns other node for given relationship."  
+(defn other
+  "Returns other node for given relationship."
+  [^Relationship r ^Node node]
   (.getOtherNode r node))
 
-(defn rel-type [^Relationship r]
-  "Returns type of given relationship."  
+(defn rel-type
+  "Returns type of given relationship."
+  [^Relationship r]
   (keyword (.name (.getType r))))
 
 ;;; Properties
 
-(defn prop? [^PropertyContainer c k]
+(defn prop?
   "Returns true if given node or relationship contains
   property with a given key"
+  [^PropertyContainer c k]
   (.hasProperty c (name-or-str k)))
 
 ;; TODO: add fns which are less resource consuming :)
 
-;; Props fetch all properties and can be very resource consuming if
-;; node contains many properties.
-(defn props [^PropertyContainer c]
-  "Return map of properties for a given node or relationship."
+(defn props
+  "Return map of properties for a given node or relationship.
+  Fetches all properties and can be very resource consuming if node
+  contains many large properties"
+  [^PropertyContainer c]
   (let [keys (.getPropertyKeys c)
         convert-fn (fn [k] [(keyword k)
                            (let [v (.getProperty c k)]
@@ -360,11 +393,12 @@
                          value))
          (.removeProperty c (name-or-str key))))))
 
-(defn set-props! [^PropertyContainer c props]
+(defn set-props!
   "Sets properties for a given node or relationship.
   The property value must be one of the valid property types (see Neo4j docs).
   If a property value is nil, removes this property from the given
   node or relationship."
+  [^PropertyContainer c props]
   (io!)
   (with-tx
     (doseq [[k v] props]
@@ -372,16 +406,17 @@
 
 ;;; Nodes
 
-(defn root []
+(defn root
   "Returns reference/root node."
-  (.getReferenceNode *neo-db*))
+  []
+  (.getReferenceNode neo-db))
 
 (defn create-node!
   "Creates a new node."
   ([]
      (io!)
      (with-tx
-       (.createNode *neo-db*)))
+       (.createNode neo-db)))
   ([props]
      (with-tx
        (doto (create-node!)
@@ -400,8 +435,9 @@
          (create-rel! node type child)
          child))))
 
-(defn delete-node! [node]
+(defn delete-node!
   "Delete node and all its relationships."
+  [node]
   (io!)
   (with-tx
     (doseq [r (rels node)]
@@ -425,10 +461,11 @@
 
 ;;; Graph traversal
 
-(defn go [^Node node & types]
+(defn go
   "Walk through the graph by following specified relations. Returns last node.
   Throws NullPointerException if path is wrong.
   Throws NotFoundException if path is ambiguous."
+  [^Node node & types]
   (let [next-node (fn [^Node node type]
                     (second (nodes (single-rel node type))))]
     (reduce next-node node types)))
@@ -470,6 +507,8 @@
 ;;;; Examples
 
 (comment
+
+  ;; See README for usage instructions, documentation and examples.
 
   (start! "neo-db")
 
