@@ -1,7 +1,7 @@
 ;; Copyright (C) 2011, Jozef Wagner. All rights reserved.
 ;; This ns is forked from hgavin/clojure-neo4j
 
-(ns neo4j.core
+(ns borneo.core
   "Neo4j wrapper, forked from hgavin/clojure-neo4j"
   (:import (org.neo4j.graphdb Direction
                               Node

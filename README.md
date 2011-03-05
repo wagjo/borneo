@@ -1,4 +1,4 @@
-The clojure-neo4j project provides a more lispy interface to Neo4j, a graph-structured on-disk transactional database.
+The borneo project provides a more lispy interface to Neo4j, a graph-structured on-disk transactional database.
 
 This library is under active development and there's plenty more work to do.
 
@@ -15,20 +15,20 @@ heavily.
 
 Disclaimer: Some comments and docs are taken from official Neo4j javadocs.
 
-## Usage:
+# Usage:
 
 * use with-db! to establish a connection to the database
 
 * all db operations must be inside with-db! body
 
-## Code notes:
+# Code notes:
 
 *   *neo-db* holds the current db instance, so that users do not have
     to supply db instance at each call to db operations. This
     approach has of course its drawbacks (e.g. only one connection at
     time), but I've found it suitable for my purposes.
 
-Examples:
+# Examples:
 
 (ns foo.example
   (:require [neo4j.core :as neo]))
