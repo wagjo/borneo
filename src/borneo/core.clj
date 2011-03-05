@@ -14,8 +14,6 @@
 ;; by the terms of this license.
 ;;
 ;; You must not remove this notice, or any other, from this software.
-;;
-;; Forked from hgavin/clojure-neo4j
 
 (ns borneo.core
   "Clojure wrapper for Neo4j, a graph database.
@@ -30,17 +28,18 @@
     to supply db instance at each call to db operations. This
     approach has of course its drawbacks (e.g. only one connection at
     time), but I've found it suitable for my purposes.
-  - TODO: note in default transactions"
+  - All mutable functions are by default wrapped in transactions. That
+    means you don't have to explicitly put them in transactions. The Neo4j
+    transaction model allows for fast transaction nesting, so you can easily
+    have your own transaction if you have a group of mutable functions.
+    In that case just wrap functions inside with-tx."
   (:import (org.neo4j.graphdb Direction
                               Node
                               PropertyContainer
                               Relationship
                               RelationshipType
-                              ReturnableEvaluator
-                              StopEvaluator
                               Transaction
                               TraversalPosition
-                              Traverser
                               Traverser$Order)
 	   (org.neo4j.kernel EmbeddedGraphDatabase)))
 
@@ -49,13 +48,15 @@
 
 (defonce ^{:private true
            :doc "Holds the current database instance"
-           :tag EmbeddedGraphDatabase}
-  neo-db nil)
+           :tag EmbeddedGraphDatabase
+           :dynamic true}
+  *neo-db* nil)
 
 (defn- array?
   "Determine whether x is an array or not"
   [x]
-  (-> x class .isArray))
+  (when x
+    (-> x class .isArray)))
 
 (defn- name-or-str
   "If x is keyword, returns its name. If not, stringify the value"
@@ -118,19 +119,36 @@
    (or (= o :depth) (nil? o)) Traverser$Order/DEPTH_FIRST
    :else (throw (IllegalArgumentException.))))
 
+(defprotocol StopEvaluator
+  "Protocol for stop evaluation. Used for graph traversing.
+  Functions:
+  (stop-node? [this pos]) - should return true if at stop node
+                            pos will be current position map"
+  (stop-node? [this pos]))
+
+(extend-protocol StopEvaluator
+  clojure.lang.Fn
+  (stop-node? [this pos] (this pos)))
+
+(defn- stop-with-protocol
+  "Custom StopEvaluator which dispatch on StopEvaluator protocol."
+  [f]
+  (proxy [org.neo4j.graphdb.StopEvaluator] []
+    (isStopNode [^TraversalPosition p] (stop-node? f (process-position p)))))
+
 (defn- stop-if
   "Custom StopEvaluator, f should return true when at stop node. f takes one
   argument. The function will be passed the current position map to act on."
   [f]
-  (proxy [StopEvaluator] []
+  (proxy [org.neo4j.graphdb.StopEvaluator] []
     (isStopNode [^TraversalPosition p] (f (process-position p)))))
 
 (defn- depth-of
   "Return a StopEvaluator for the given traversal depth."
   [d]
   (if (== d 1) 
-    StopEvaluator/DEPTH_ONE
-    (stop-if #(== (:depth %) d))))
+    org.neo4j.graphdb.StopEvaluator/DEPTH_ONE
+    (stop-if #(>= (:depth %) d))))
 
 (defn- stop-evaluator
   "Translates value to the respective stop evaluator.
@@ -139,6 +157,7 @@
     - :1, :2, :X (X being any positive integer) - depth of X
     - Custom function which takes one argument, current position
       and should return true when at stop node.
+    - anything extending StopEvaluator protocol
   Examples: (stop-evaluator :8)
             (stop-evaluator :1)
             (stop-evaluator :end)
@@ -147,33 +166,41 @@
   See javadoc for StopEvaluator for more info."
   [e]  
   (cond
-   (or (= :end e) (nil? e)) StopEvaluator/END_OF_GRAPH
+   (or (= :end e) (nil? e)) org.neo4j.graphdb.StopEvaluator/END_OF_GRAPH
    (keyword? e) (depth-of (Integer/parseInt (name e)))
-   (fn? e) (stop-if e)))
+   :else (stop-with-protocol e)))
 
-(defn- return-if
-  "Custom ReturnableEvaluator, f should return true if node at current
-  position should be returned. Takes a function of one argument.
-  The function will be passed the current position map to act on."
+(defprotocol ReturnableEvaluator
+  "Protocol for return evaluation. Used for graph traversing.
+  Functions:
+  (returnable-node? [this pos]) - should return true if node should
+                                  be returned. pos will be current
+                                  position map"
+  (returnable-node? [this pos]))
+
+(defn- returnable-by-props
+  "Returns nodes that match the specified property values. propmap is a map
+  that defines key value pairs that ReturnableEvaluator should match on."
+  [props pos]
+  (let [^Node node (:node pos)
+        check-prop (fn [[k v]] (= v (.getProperty node (name-or-str k) nil)))]
+    (every? check-prop props)))
+
+(extend-protocol ReturnableEvaluator
+  clojure.lang.Fn
+  (returnable-node? [this pos] (this pos))
+  clojure.lang.IPersistentMap
+  (returnable-node? [this pos] (returnable-by-props this pos)))
+
+(defn- returnable-with-protocol
+  "Custom ReturnableEvaluator which dispatch on ReturnableEvaluator protocol."
   [f]
-  (proxy [ReturnableEvaluator] []
-    (isReturnableNode [^TraversalPosition p] (f (process-position p)))))
+  (proxy [org.neo4j.graphdb.ReturnableEvaluator] []
+    (isReturnableNode [^TraversalPosition p]
+                      (returnable-node? f (process-position p)))))
 
-(defn- return-by-props
-  "Creates a ReturnableEvaluator for use with a traverser that returns
-  nodes that match the specified property values. propmap is a map that
-  defines key value pairs that ReturnableEvaluator should match on."
-  [props]
-  (return-if
-   (fn [pos]
-     (let [^Node node (:node pos)
-           check-prop (fn [[k v]] (= v (.getProperty node (name-or-str k) nil)))]
-       (every? check-prop props)))))
-
-;; TODO: Protocols
-
-(defn- return-evaluator
-  "Translates value to the respective return evaluator.
+(defn- returnable-evaluator
+  "Translates value to the respective returnable evaluator.
   Valid values are:
     - :all-but-start or nil  - all but start nodes
     - :all - all nodes
@@ -181,32 +208,32 @@
       and should return true when node at current position should be returned.
     - Map that defines key-value pairs that ReturnableEvaluator
       should match on specified property values.
-  Examples: (return-evaluator :all)
-            (return-evaluator :all-but-start)
-            (return-evaluator nil)
-            (return-evaluator custom-fn)
-            (return-evaluator {:uid \"johndoe1\"})
-  See javadoc for ReturnEvaluator for more info."
+    - anything extending ReturnableEvaluator protocol
+  Examples: (returnable-evaluator :all)
+            (returnable-evaluator :all-but-start)
+            (returnable-evaluator nil)
+            (returnable-evaluator custom-fn)
+            (returnable-evaluator {:uid \"johndoe1\"})
+  See javadoc for ReturnableEvaluator for more info."
   [e]
   (cond
-   (or (= :all-but-start e) (nil? e)) ReturnableEvaluator/ALL_BUT_START_NODE
-   (= :all e) ReturnableEvaluator/ALL
-   (map? e) (return-by-props e)
-   (fn? e) (return-if e)))
+   (or (= :all-but-start e) (nil? e)) org.neo4j.graphdb.ReturnableEvaluator/ALL_BUT_START_NODE
+   (= :all e) org.neo4j.graphdb.ReturnableEvaluator/ALL
+   :else (returnable-with-protocol e)))
 
 (defn- start!
   "Establish a connection to the database.
-  Uses neo-db Var to hold the connection."
+  Uses *neo-db* Var to hold the connection."
   [path]
   (io!)
   (let [n (EmbeddedGraphDatabase. path)]
-    (alter-var-root #'neo-db (fn [_] n))))
+    (alter-var-root #'*neo-db* (fn [_] n))))
 
 (defn- stop!
-  "Closes a connection stored in neo-db"
+  "Closes a connection stored in *neo-db*"
   []
   (io!)
-  (.shutdown neo-db))
+  (.shutdown *neo-db*))
 
 
 ;;;; Public API
@@ -225,11 +252,30 @@
        ~@body
        (finally (stop!)))))
 
+(defmacro with-local-db!
+  "Establish a connection to the neo db. Connection is visible
+  only in current thread. Because there is an overhead when
+  establishing connection, users should not call this macro often.
+  This is a treadsafe version, which limits connection to
+  the current thread only. This allows you to have parallel
+  connections to different databases. It is not recommended to use
+  this function together with with-db! in one program."
+  [path & body]
+  (io!)
+  ;; Using binding macro, db is accessible only in this thread
+  `(binding [*neo-db* (EmbeddedGraphDatabase. ~path)]
+     (try
+       ~@body
+       (finally (stop!)))))
+
 (defmacro with-tx
   "Establish a transaction. Use it for mutable db operations.
-  If you do not want to commit it, throw an exception."
+  If you do not want to commit it, throw an exception.
+  All mutable functions use transactions by default, so you don't
+  have to use this macro. You should use this macro to group your
+  functions into a bigger transactions."
   [& body]
-  `(let [tx# (.beginTx neo-db)]
+  `(let [tx# (.beginTx *neo-db*)]
      (try
        (let [val# (do ~@body)]
          (.success tx#)
@@ -239,22 +285,22 @@
 (defn get-db
   "Returns current database instance"
   []
-  neo-db)
+  *neo-db*)
 
 (defn get-path
   "Returns path to where the database is stored"
   []
-  (.getStoreDir neo-db))
+  (.getStoreDir *neo-db*))
 
 (defn read-only?
   "Returns true if database is read only"
   []
-  (.isReadOnly neo-db))
+  (.isReadOnly *neo-db*))
 
 (defn index
   "Returns the IndexManager paired with this graph database service"
   []
-  (.index neo-db))
+  (.index *neo-db*))
 
 ;;; Property Containers
 
@@ -264,19 +310,25 @@
   [^PropertyContainer c k]
   (.hasProperty c (name-or-str k)))
 
-;; TODO: add fns which are less resource consuming :)
+(defn prop
+  "Returns property value based on its key.
+  If property is not found, returns nil."
+  [^PropertyContainer c k]
+  (let [v (.getProperty c (name k) nil)]
+    (if (array? v) ; handle multiple values
+      (seq v)
+      v)))
+
+;; TODO: add fns which are less resource consuming :), like map which
+;; has lazy values
 
 (defn props
   "Return map of properties for a given node or relationship.
   Fetches all properties and can be very resource consuming if node
-  contains many large properties"
+  contains many large properties. This is a convenience function."
   [^PropertyContainer c]
   (let [keys (.getPropertyKeys c)
-        convert-fn (fn [k] [(keyword k)
-                           (let [v (.getProperty c k)]
-                             (if (array? v) ; handle multiple values
-                               (seq v)
-                               v))])]
+        convert-fn (fn [k] [(keyword k) (prop c k)])]
     (into {} (map convert-fn keys))))
 
 (defn set-prop!
@@ -301,7 +353,7 @@
   "Sets properties for a given node or relationship.
   The property value must be one of the valid property types (see Neo4j docs).
   If a property value is nil, removes this property from the given
-  node or relationship."
+  node or relationship. This is a convenience function."
   [^PropertyContainer c props]
   (io!)
   (with-tx
@@ -341,6 +393,16 @@
   [^Relationship r]
   (.getNodes r))
 
+(defn start-node
+  "Returns start node for given relationship."
+  [^Relationship r]
+  (.getStartNode r))
+
+(defn end-node
+  "Returns end node for given relationship."
+  [^Relationship r]
+  (.getEndNode r))
+
 (defn other-node
   "Returns other node for given relationship."
   [^Relationship r ^Node node]
@@ -362,7 +424,7 @@
   "Returns lazy seq of all relationship types currently in database"
   []
   (lazy-seq
-   (.getRelationshipTypes neo-db)))
+   (.getRelationshipTypes *neo-db*)))
 
 ;;; Nodes
 
@@ -408,7 +470,7 @@
   Examples: (rels node)                  ; All rels
             (rels node :foo)             ; Rels of :foo type of any direction
             (rels node [:foo :bar :baz]) ; Rels of any of specified types,
-                                        ; any directions
+                                         ; any directions
             (rels node :foo :in)         ; Rels of :foo type, :in direction
             (rels node nil :in)          ; Rels of any type of :in direction
             (rels node :foo nil)         ; Use (rel node :foo) instead"
@@ -438,7 +500,7 @@
   ([]
      (io!)
      (with-tx
-       (.createNode neo-db)))
+       (.createNode *neo-db*)))
   ([props]
      (with-tx
        (doto (create-node!)
@@ -488,24 +550,24 @@
 (defn all-nodes
   "Returns lazy-seq of all nodes in the db."
   []
-  (lazy-seq (.getAllNodes neo-db)))
+  (lazy-seq (.getAllNodes *neo-db*)))
 
 (defn node-by-id
   "Returns node with a given id.
   Note that ids are not very good as unique identifiers."
   [id]
-  (.getNodeById neo-db))
+  (.getNodeById *neo-db*))
 
 (defn rel-by-id
   "Returns relationship with a given id.
   Note that ids are not very good as unique identifiers."
   [id]
-  (.getRelationshipById neo-db id))
+  (.getRelationshipById *neo-db* id))
 
 (defn root
   "Returns reference/root node."
   []
-  (.getReferenceNode neo-db))
+  (.getReferenceNode *neo-db*))
 
 (defn walk
   "Walk through the graph by following specified relations. Returns last node.
@@ -547,7 +609,7 @@
       (.traverse node
                  (order* order)
                  (stop-evaluator stop-eval)
-                 (return-evaluator return-eval)
+                 (returnable-evaluator return-eval)
                  (rel-dir-map rel)))))
 
 ;;;; Examples
@@ -560,17 +622,31 @@
 
   (stop!)
 
-  (traverse (root)
-            :depth
-            :end
-            :all
-            {:foo :out})
+  (defn a [pos] true)
+
+  (deftype X [depth]
+    StopEvaluator
+    (stop-node? [this pos] (println "ahoj" depth pos) false))
+
+  (deftype Y [uid]
+    ReturnableEvaluator
+    (returnable-node? [this pos] (= uid (prop (:node pos) :uid))))
+
+  (take 3 (traverse (root)
+                    :depth
+                    (X. 3)
+                    :all
+                    {:users :out :user :out :itests :out}))
 
   (map props (traverse (root)
-                       {:property1 "value"}
-                       {:foo :out :bar :out}))
+                       {:uid "jw817dk"}
+                       {:users :out :user :out}))
 
-  (count (traverse (walk (root) :foo)
-                   :bar))
+  (map props (traverse (root)
+                       (Y. "jw817dk")
+                       {:users :out :user :out}))
+
+  (count (traverse (walk (root) :users)
+                   :user))
   
 )
