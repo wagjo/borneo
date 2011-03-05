@@ -31,7 +31,7 @@ Disclaimer: Some comments and docs are taken from official Neo4j javadocs.
 # Examples:
 
 (ns foo.example
-  (:require [neo4j.core :as neo]))
+  (:require [borneo.core :as neo]))
 
 (neo/with-neo "/path/to/db"
 
