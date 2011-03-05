@@ -78,7 +78,9 @@ Shortcuts:<br />
 <div id="index-body">
   <h2 id="A"><span id="section-head">A</span></h2>
   <pre>
-</pre>
+<span id="section-content"> <a href="borneo.core-api.html#borneo.core/all-nodes">all-nodes</a><span id="line-content">                    function      borneo.core        Returns lazy-seq of all nodes in the db..
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/all-rel-types">all-rel-types</a><span id="line-content">                function      borneo.core        Returns lazy seq of all relationship types current...
+</span></span></pre>
 </div><div id="index-body">
   <h2 id="B"><span id="section-head">B</span></h2>
   <pre>
@@ -87,7 +89,7 @@ Shortcuts:<br />
   <h2 id="C"><span id="section-head">C</span></h2>
   <pre>
 <span id="section-content"> <a href="borneo.core-api.html#borneo.core/create-child!">create-child!</a><span id="line-content">                function      borneo.core        Creates a node that is a child of the specified pa...
-</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/create-node!">create-node!</a><span id="line-content">                 function      borneo.core        Creates a new node..
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/create-node!">create-node!</a><span id="line-content">                 function      borneo.core        Creates a new node, not linked with any other node...
 </span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/create-rel!">create-rel!</a><span id="line-content">                  function      borneo.core        Create relationship of a supplied type between fro...
 </span></span></pre>
 </div><div id="index-body">
@@ -107,7 +109,9 @@ Shortcuts:<br />
 </div><div id="index-body">
   <h2 id="G"><span id="section-head">G</span></h2>
   <pre>
-<span id="section-content"> <a href="borneo.core-api.html#borneo.core/go">go</a><span id="line-content">                           function      borneo.core        Walk through the graph by following specified rela...
+<span id="section-content"> <a href="borneo.core-api.html#borneo.core/get-db">get-db</a><span id="line-content">                       function      borneo.core        Returns current database instance.
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/get-id">get-id</a><span id="line-content">                       function      borneo.core        Returns id for a given node or relationship. Note ...
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/get-path">get-path</a><span id="line-content">                     function      borneo.core        Returns path to where the database is stored.
 </span></span></pre>
 </div><div id="index-body">
   <h2 id="H"><span id="section-head">H</span></h2>
@@ -116,7 +120,7 @@ Shortcuts:<br />
 </div><div id="index-body">
   <h2 id="I"><span id="section-head">I</span></h2>
   <pre>
-<span id="section-content"> <a href="borneo.core-api.html#borneo.core/id">id</a><span id="line-content">                           function      borneo.core        Returns id for a given node or relationship.
+<span id="section-content"> <a href="borneo.core-api.html#borneo.core/index">index</a><span id="line-content">                        function      borneo.core        Returns the IndexManager paired with this graph da...
 </span></span></pre>
 </div><div id="index-body">
   <h2 id="J"><span id="section-head">J</span></h2>
@@ -137,12 +141,12 @@ Shortcuts:<br />
 </div><div id="index-body">
   <h2 id="N"><span id="section-head">N</span></h2>
   <pre>
-<span id="section-content"> <a href="borneo.core-api.html#borneo.core/nodes">nodes</a><span id="line-content">                        function      borneo.core        Returns the two nodes attached to the given relati...
+<span id="section-content"> <a href="borneo.core-api.html#borneo.core/node-by-id">node-by-id</a><span id="line-content">                   function      borneo.core        Returns node with a given id. Note that ids are no...
 </span></span></pre>
 </div><div id="index-body">
   <h2 id="O"><span id="section-head">O</span></h2>
   <pre>
-<span id="section-content"> <a href="borneo.core-api.html#borneo.core/other">other</a><span id="line-content">                        function      borneo.core        Returns other node for given relationship..
+<span id="section-content"> <a href="borneo.core-api.html#borneo.core/other-node">other-node</a><span id="line-content">                   function      borneo.core        Returns other node for given relationship..
 </span></span></pre>
 </div><div id="index-body">
   <h2 id="P"><span id="section-head">P</span></h2>
@@ -157,9 +161,12 @@ Shortcuts:<br />
 </div><div id="index-body">
   <h2 id="R"><span id="section-head">R</span></h2>
   <pre>
-<span id="section-content"> <a href="borneo.core-api.html#borneo.core/rel-type">rel-type</a><span id="line-content">                     function      borneo.core        Returns type of given relationship..
+<span id="section-content"> <a href="borneo.core-api.html#borneo.core/read-only?">read-only?</a><span id="line-content">                   function      borneo.core        Returns true if database is read only.
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/rel-by-id">rel-by-id</a><span id="line-content">                    function      borneo.core        Returns relationship with a given id. Note that id...
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/rel-nodes">rel-nodes</a><span id="line-content">                    function      borneo.core        Returns the two nodes attached to the given relati...
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/rel-type">rel-type</a><span id="line-content">                     function      borneo.core        Returns type of given relationship..
 </span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/rel?">rel?</a><span id="line-content">                         function      borneo.core        Returns true if there are relationships attached t...
-</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/rels">rels</a><span id="line-content">                         function      borneo.core        Returns all relationships attached to this node. S...
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/rels">rels</a><span id="line-content">                         function      borneo.core        Returns relationships attached to this node. Synta...
 </span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/root">root</a><span id="line-content">                         function      borneo.core        Returns reference/root node..
 </span></span></pre>
 </div><div id="index-body">
@@ -185,7 +192,8 @@ Shortcuts:<br />
 </div><div id="index-body">
   <h2 id="W"><span id="section-head">W</span></h2>
   <pre>
-<span id="section-content"> <a href="borneo.core-api.html#borneo.core/with-db!">with-db!</a><span id="line-content">                     macro         borneo.core        Establish a connection to the neo db. Because ther...
+<span id="section-content"> <a href="borneo.core-api.html#borneo.core/walk">walk</a><span id="line-content">                         function      borneo.core        Walk through the graph by following specified rela...
+</span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/with-db!">with-db!</a><span id="line-content">                     macro         borneo.core        Establish a connection to the neo db. Because ther...
 </span></span><span id="section-content"> <a href="borneo.core-api.html#borneo.core/with-tx">with-tx</a><span id="line-content">                      macro         borneo.core        Establish a transaction. Use it for mutable db ope...
 </span></span></pre>
 </div><div id="index-body">
