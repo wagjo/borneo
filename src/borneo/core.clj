@@ -554,7 +554,7 @@
   "Returns node with a given id.
   Note that ids are not very good as unique identifiers."
   [id]
-  (.getNodeById *neo-db*))
+  (.getNodeById *neo-db* id))
 
 (defn rel-by-id
   "Returns relationship with a given id.

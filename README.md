@@ -10,7 +10,7 @@ use Blueprints interface.
 
 I've decided to create my own Neo4j wrapper, because I was not happy
 with the current state (01/2011) of existing ones. While I initially
-forked from
+forked from late 
 [hgavin/clojure-neo4j](http://github.com/hgavin/clojure-neo4j), I
 quickly realized that drastic changes will be needed. This chapter
 summarizes my motivation behind changes and decisions I made.
