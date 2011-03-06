@@ -53,6 +53,8 @@ namespace.
   <div style="margin-left: 1em;" class="toc-section">
     <a href="#toc0">Overview</a>
     <div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/*neo-db*">*neo-db*</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#borneo.core/ReturnableEvaluator">ReturnableEvaluator</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#borneo.core/StopEvaluator">StopEvaluator</a>
@@ -72,8 +74,6 @@ namespace.
       <a href="#borneo.core/delete-node!">delete-node!</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#borneo.core/end-node">end-node</a>
-    </div><div style="margin-left: 1em;" class="toc-entry">
-      <a href="#borneo.core/get-db">get-db</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#borneo.core/get-id">get-id</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
@@ -111,7 +111,11 @@ namespace.
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#borneo.core/single-rel">single-rel</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/start!">start!</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#borneo.core/start-node">start-node</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#borneo.core/stop!">stop!</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#borneo.core/traverse">traverse</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
@@ -161,6 +165,16 @@ Code notes:
 <div id="var-entry">
   <br />
   <hr />
+  <h2 id="borneo.core/*neo-db*">*neo-db*</h2>
+  <span id="var-type">var</span><br />
+  <pre id="var-usage"></pre>
+  <pre id="var-docstr">Holds the current database instance</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L49" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
   <h2 id="borneo.core/ReturnableEvaluator">ReturnableEvaluator</h2>
   <span id="var-type">var</span><br />
   <pre id="var-usage"></pre>
@@ -171,7 +185,7 @@ Functions:
                                 position map</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L173" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L172" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -184,7 +198,7 @@ Functions:
                           pos will be current position map</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L122" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L121" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -195,7 +209,7 @@ Functions:
   <pre id="var-docstr">Returns lazy-seq of all nodes in the db.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L550" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L545" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -206,7 +220,7 @@ Functions:
   <pre id="var-docstr">Returns lazy seq of all relationship types currently in database</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L423" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L418" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -220,7 +234,7 @@ Functions:
 props is a map that defines the properties of the node.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L511" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L506" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -232,7 +246,7 @@ props is a map that defines the properties of the node.</pre>
   <pre id="var-docstr">Creates a new node, not linked with any other nodes.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L498" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L493" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -243,7 +257,7 @@ props is a map that defines the properties of the node.</pre>
   <pre id="var-docstr">Create relationship of a supplied type between from and to nodes.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L416" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L411" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -255,7 +269,7 @@ props is a map that defines the properties of the node.</pre>
 Only node which has no relationships attached to it can be deleted.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L369" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L364" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -266,7 +280,7 @@ Only node which has no relationships attached to it can be deleted.</pre>
   <pre id="var-docstr">Delete node and all its relationships.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L524" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L519" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -277,18 +291,7 @@ Only node which has no relationships attached to it can be deleted.</pre>
   <pre id="var-docstr">Returns end node for given relationship.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L401" id="var-source">Source</a>
-</div><div id="var-entry">
-  <br />
-  <hr />
-  <h2 id="borneo.core/get-db">get-db</h2>
-  <span id="var-type">function</span><br />
-  <pre id="var-usage">Usage: (get-db)
-</pre>
-  <pre id="var-docstr">Returns current database instance</pre>
-  
-  
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L285" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L396" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -300,7 +303,7 @@ Only node which has no relationships attached to it can be deleted.</pre>
 Note that ids are not very good as unique identifiers.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L363" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L358" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -311,7 +314,7 @@ Note that ids are not very good as unique identifiers.</pre>
   <pre id="var-docstr">Returns path to where the database is stored</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L290" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L285" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -322,7 +325,7 @@ Note that ids are not very good as unique identifiers.</pre>
   <pre id="var-docstr">Returns the IndexManager paired with this graph database service</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L300" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L295" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -334,7 +337,7 @@ Note that ids are not very good as unique identifiers.</pre>
 Note that ids are not very good as unique identifiers.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L555" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L550" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -345,7 +348,7 @@ Note that ids are not very good as unique identifiers.</pre>
   <pre id="var-docstr">Returns other node for given relationship.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L406" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L401" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -357,7 +360,7 @@ Note that ids are not very good as unique identifiers.</pre>
 If property is not found, returns nil.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L313" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L308" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -369,7 +372,7 @@ If property is not found, returns nil.</pre>
 property with a given key</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L307" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L302" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -382,7 +385,7 @@ Fetches all properties and can be very resource consuming if node
 contains many large properties. This is a convenience function.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L325" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L320" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -393,7 +396,7 @@ contains many large properties. This is a convenience function.</pre>
   <pre id="var-docstr">Returns true if database is read only</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L295" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L290" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -405,7 +408,7 @@ contains many large properties. This is a convenience function.</pre>
 Note that ids are not very good as unique identifiers.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L561" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L556" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -416,7 +419,7 @@ Note that ids are not very good as unique identifiers.</pre>
   <pre id="var-docstr">Returns the two nodes attached to the given relationship.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L391" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L386" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -427,7 +430,7 @@ Note that ids are not very good as unique identifiers.</pre>
   <pre id="var-docstr">Returns type of given relationship.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L411" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L406" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -455,7 +458,7 @@ Examples: (rel? node)                  ; All rels
           (rel? node :foo nil)         ; Use (rel? node :foo) instead</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L431" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L426" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -483,7 +486,7 @@ Examples: (rels node)                  ; All rels
           (rels node :foo nil)         ; Use (rel node :foo) instead</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L460" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L455" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -494,7 +497,7 @@ Examples: (rels node)                  ; All rels
   <pre id="var-docstr">Returns reference/root node.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L567" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L562" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -509,7 +512,7 @@ If a property value is nil, removes this property from the given
 node or relationship.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L334" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L329" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -523,7 +526,7 @@ If a property value is nil, removes this property from the given
 node or relationship. This is a convenience function.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L352" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L347" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -537,7 +540,20 @@ direction.
 Valid directions are :in :out and :both, defaults to :out</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L489" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L484" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/start!">start!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (start! path)
+</pre>
+  <pre id="var-docstr">Establish a connection to the database.
+Uses *neo-db* Var to hold the connection.
+Do not use this function, use with-db! or with-local-db! instead</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L225" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -548,7 +564,19 @@ Valid directions are :in :out and :both, defaults to :out</pre>
   <pre id="var-docstr">Returns start node for given relationship.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L396" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L391" id="var-source">Source</a>
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="borneo.core/stop!">stop!</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (stop!)
+</pre>
+  <pre id="var-docstr">Closes a connection stored in *neo-db*.
+Do not use this function, use with-db! or with-local-db! instead</pre>
+  
+  
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L234" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -580,7 +608,7 @@ rel - a keyword representing relation type or a map where keys are
       relation type keywords and values are directions (:in or :out)</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L581" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L576" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -593,7 +621,7 @@ Throws NullPointerException if path is wrong.
 Throws NotFoundException if path is ambiguous.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L572" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L567" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -606,7 +634,7 @@ Because there is an overhead when establishing connection, users should
 not call this macro often. Also note that this macro is not threadsafe.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L241" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L241" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -623,7 +651,7 @@ connections to different databases. It is not recommended to use
 this function together with with-db! in one program.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L255" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L255" id="var-source">Source</a>
 </div><div id="var-entry">
   <br />
   <hr />
@@ -638,7 +666,7 @@ have to use this macro. You should use this macro to group your
 functions into a bigger transactions.</pre>
   
   
-  <a href="http://github.com/wagjo/borneo/blob/bff8c17ac7318610c8c32db330c2086da7acdd13/src/borneo/core.clj#L271" id="var-source">Source</a>
+  <a href="http://github.com/wagjo/borneo/blob/146ea48c25b4c7766eae9dd6d4552bf47bc2a327/src/borneo/core.clj#L271" id="var-source">Source</a>
 </div>
 
 
