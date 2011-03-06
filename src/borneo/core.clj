@@ -46,8 +46,7 @@
 
 ;;;; Implementation details
 
-(defonce ^{:private true
-           :doc "Holds the current database instance"
+(defonce ^{:doc "Holds the current database instance"
            :tag EmbeddedGraphDatabase
            :dynamic true}
   *neo-db* nil)
@@ -282,11 +281,6 @@
          (.success tx#)
          val#)
        (finally (.finish tx#)))))
-
-(defn get-db
-  "Returns current database instance"
-  []
-  *neo-db*)
 
 (defn get-path
   "Returns path to where the database is stored"

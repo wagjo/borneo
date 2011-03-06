@@ -20,10 +20,12 @@ Quick overview of available functions (most important ones are
 emphasized):
 
 * _Database management_
+  * _[*neo-db*](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/*neo-db*)_ - Holds current database instance
+  * _[start!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/start!)_ - Establish a connection to the database
+  * _[stop!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/stop!)_ - Closes a connection stored in \*neo-db\*
   * ___[with-db!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-db!)_ - establish a connection to the database__
   * _[with-local-db!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-local-db!)_ - establish a thread local connection to the database
   * ___[with-tx](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-tx)_ - establish a transaction__
-  * _[get-db](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/get-db)_ - get current database instance
   * _[get-path](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/get-path)_ - get path to where database is stored
   * _[read-only?](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/read-only?)_ - returns true if database is read only
   * _[index](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/index)_ - returns Index Manager
