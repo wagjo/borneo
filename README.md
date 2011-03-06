@@ -29,6 +29,7 @@ emphasized):
   * _[index](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/index)_ - returns Index Manager
 * _Property Containers (both Nodes and Relationships)_
   * _[prop?](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/prop?)_ - returns true if node or relationship contains given property
+  * _[prop](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/prop)_ - returns specific property value for a given node or relationship
   * ___[props](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/props)_ - returns map of properties for a given node or relationship__
   * _[set-prop!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/set-prop!)_ - sets or removes property in a given node or relationship
   * ___[set-props!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/set-props!)_ - sets (or removes) properties for a given node or relationships__

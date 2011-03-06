@@ -221,22 +221,23 @@
    (= :all e) org.neo4j.graphdb.ReturnableEvaluator/ALL
    :else (returnable-with-protocol e)))
 
-(defn- start!
+;;;; Public API
+
+(defn start!
   "Establish a connection to the database.
-  Uses *neo-db* Var to hold the connection."
+  Uses *neo-db* Var to hold the connection.
+  Do not use this function, use with-db! or with-local-db! instead"
   [path]
   (io!)
   (let [n (EmbeddedGraphDatabase. path)]
     (alter-var-root #'*neo-db* (fn [_] n))))
 
-(defn- stop!
-  "Closes a connection stored in *neo-db*"
+(defn stop!
+  "Closes a connection stored in *neo-db*.
+  Do not use this function, use with-db! or with-local-db! instead"
   []
   (io!)
   (.shutdown *neo-db*))
-
-
-;;;; Public API
 
 (defmacro with-db!
   "Establish a connection to the neo db.
@@ -247,7 +248,7 @@
   `(do
      ;; Not using binding macro, because db should be accessible
      ;; from multiple threads.
-     (start! path)
+     (start! ~path)
      (try
        ~@body
        (finally (stop!)))))
@@ -475,16 +476,16 @@
             (rels node nil :in)          ; Rels of any type of :in direction
             (rels node :foo nil)         ; Use (rel node :foo) instead"
   ([^Node node]
-     (.getRelationships node))
+     (seq (.getRelationships node)))
   ([^Node node type-or-types]
      (let [t (map rel-type* (flatten [type-or-types]))]
        ;; TODO: Is there a way to type hint array in following call?
-       (.getRelationships node (into-array RelationshipType t))))
+       (seq (.getRelationships node (into-array RelationshipType t)))))
   ([^Node node type direction]
      (cond
-      (nil? type) (.getRelationships node (rel-dir direction))
+      (nil? type) (seq (.getRelationships node (rel-dir direction)))
       (nil? direction) (rels node type)
-      :else (.getRelationships node (rel-type* type) (rel-dir direction)))))
+      :else (seq (.getRelationships node (rel-type* type) (rel-dir direction))))))
 
 (defn single-rel 
   "Returns the only relationship for the node of the given type and
