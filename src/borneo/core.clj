@@ -133,7 +133,9 @@
   "Custom StopEvaluator which dispatch on StopEvaluator protocol."
   [f]
   (proxy [org.neo4j.graphdb.StopEvaluator] []
-    (isStopNode [^TraversalPosition p] (stop-node? f (process-position p)))))
+    (isStopNode [^TraversalPosition p]
+                (or (stop-node? f (process-position p))
+                    false))))          ; nil is not valid return value
 
 (defn- stop-if
   "Custom StopEvaluator, f should return true when at stop node. f takes one
@@ -196,7 +198,8 @@
   [f]
   (proxy [org.neo4j.graphdb.ReturnableEvaluator] []
     (isReturnableNode [^TraversalPosition p]
-                      (returnable-node? f (process-position p)))))
+                      (or (returnable-node? f (process-position p))
+                          false))))     ; nil is not valid return value
 
 (defn- returnable-evaluator
   "Translates value to the respective returnable evaluator.

@@ -20,7 +20,7 @@ Quick overview of available functions (most important ones are
 emphasized):
 
 * _Database management_
-  * _[*neo-db*](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/*neo-db*)_ - Holds current database instance
+  * _[\*neo-db\*](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/*neo-db*)_ - Holds current database instance
   * _[start!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/start!)_ - Establish a connection to the database
   * _[stop!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/stop!)_ - Closes a connection stored in \*neo-db\*
   * ___[with-db!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-db!)_ - establish a connection to the database__
@@ -65,14 +65,207 @@ emphasized):
 
 ## Examples
 
+Following examples show basic borneo functions. Code presented here is
+not meant to be an idiomatic clojure code, e.g. you should wrap most
+of your operations in separate functions, and use let instead of def
+to store a reference to a node.
+
+### Basic usage
+
+Require a borneo ns and wrap all borneo related stuff in a with-db! macro
+
     (ns foo.example
       (:require [borneo.core :as neo]))
 
-    (neo/with-neo "/path/to/db"
+    (neo/with-db! "matrix-db"
 
-      TODO
+      ;; use borneo here
 
     )
+
+### Populate database
+
+Populate our database with graph inspired by [Neo4j Matrix social
+graph](http://dist.neo4j.org/basic-neo4j-code-examples-2008-05-08.pdf). Note
+that for simplicity we do not check if graph already exists:
+
+    ;; basic layout
+    (def humans (neo/create-child! :humans nil))
+    (def programs (neo/create-child! :programs nil))
+
+    ;; add programs
+    (def smith (neo/create-child! programs :program
+                                  {:name "Agent Smith"
+                                   :language "C++"
+                                   :age 40}))
+    (def architect (neo/create-child! programs :program
+                                      {:name "Architect"
+                                       :language "Clojure"
+                                       :age 600}))
+
+    ;; add humans
+    (def the-one (neo/create-child! humans :human
+                                    {:name "Thomas Anderson"
+                                     :age 29}))
+    (def trinity (neo/create-child! humans :human
+                                    {:name "Trinity"
+                                     :age 27}))
+    (def morpheus (neo/create-child! humans :human
+                                     {:name "Morpheus"
+                                      :rank "Captain"
+                                      :age 35}))
+    (def cypher (neo/create-child! humans :human
+                                   {:name "Cypher"}))
+
+    ;; add relationships
+
+    (neo/create-rel! the-one :knows trinity)
+    (neo/create-rel! the-one :knows morpheus)
+    (neo/create-rel! morpheus :knows trinity)
+    (neo/create-rel! morpheus :knows cypher)
+    (neo/set-props! (neo/create-rel! cypher :knows smith)
+                    {:disclosure "secret"
+                     :age 6})
+    (neo/create-rel! smith :knows architect)
+    (neo/create-rel! trinity :loves the-one)
+
+### Basic traversal
+
+Assuming we do not have any of previous references to nodes.
+    
+Get me all human nodes
+
+    (let [humans (neo/walk (neo/root) :humans)]
+      (neo/traverse humans :human))
+    ;; evals to:
+    ;; (#<NodeProxy Node[5]> #<NodeProxy Node[6]>
+    ;;  #<NodeProxy Node[7]> #<NodeProxy Node[8]>)
+                 
+I want to see their properties
+
+    (let [human-nodes (neo/traverse (neo/walk (neo/root) :humans) :human)]
+      (map neo/props human-nodes))
+    ;; evals to:
+    ;; ({:name "Thomas Anderson", :age 29}
+    ;;  {:name "Trinity", :age 27}
+    ;;  {:name "Morpheus", :rank "Captain", :age 35}
+    ;;  {:name "Cypher"})
+
+I want to find Mr. Anderson, assuming I don't have one
+
+    (def the-one (first (neo/traverse (neo/root)
+                                      {:name "Thomas Anderson"}
+                                      {:humans :out
+                                       :human :out})))
+    ;; Or if I want to traverse from root
+    (def the-one (first (neo/traverse (neo/walk (neo/root) :humans)
+                                      {:name "Thomas Anderson"}
+                                      {:human :out})))
+
+### Properties and Relationships
+    
+Andersons properties
+
+    (neo/props the-one)
+    ;; evals to:
+    ;; {:name "Thomas Anderson", :age 29}
+
+Andersons age
+
+    (neo/prop the-one :age)
+    ;; evals to:
+    ;; 29
+
+Andersons relationships
+
+    (neo/rels the-one)
+    ;; evals to:
+    ;; (#<RelationshipProxy Relationship[4]>
+    ;;  #<RelationshipProxy Relationship[8]>
+    ;;  #<RelationshipProxy Relationship[9]>
+    ;;  #<RelationshipProxy Relationship[14]>)
+
+But I want to see their types
+
+    (map neo/rel-type (neo/rels the-one))
+    ;; evals to:
+    ;; (:human :knows :knows :loves)
+
+Get only :knows or :loves type relationships
+
+    (neo/rels the-one [:knows :loves])
+
+Get only love relationships :)
+
+    (neo/rels the-one :loves)
+
+Get only incoming relationships
+
+    (neo/rels the-one nil :in)
+
+### Advanced Traversal
+
+Who does Anderson know?
+
+    (map #(neo/prop % :name)
+         (neo/traverse the-one
+                       :1 nil
+                       {:knows :out}))
+    ;; ("Trinity" "Morpheus")
+
+Go one level deeper
+
+    (map #(neo/prop % :name)
+         (neo/traverse the-one
+                       :3 nil
+                       {:knows :out}))
+    ;; ("Trinity" "Morpheus" "Cypher" "Agent Smith")
+
+Go all the way down
+
+    (map #(neo/prop % :name)
+         (neo/traverse the-one
+                       nil nil
+                       {:knows :out}))
+    ;; ("Trinity" "Morpheus" "Cypher" "Agent Smith" "Architect")
+
+Return every human who does not have its age set. First create a
+custom returnable evaluator function
+
+    (defn age-not-present? [pos]
+      (and
+       (not (:start? pos))              ; eliminate start node
+       (not (neo/prop (:node pos) :age))))
+
+Now find every human without his age set
+
+    (map neo/props (neo/traverse (neo/walk (neo/root) :humans)
+                                 age-not-present?
+                                 {:human :out}))
+    ;; ({:name "Cypher"})
+
+Return anybody between specified age range. First we have to create
+our own return evaluator
+
+    (defrecord AgeRangeEvaluator [from to]
+      neo/ReturnableEvaluator
+      (returnable-node? [this pos] (let [age (neo/prop (:node pos) :age)]
+                                     (when age
+                                       (and
+                                        (>= age (:from this))
+                                        (<= age (:to this)))))))
+
+Traverse
+
+    (map neo/props (neo/traverse (neo/root)
+                                 (AgeRangeEvaluator. 30 40)
+                                 {:humans :out
+                                  :human :out
+                                  :programs :out
+                                  :program :out}))
+    ;; evals to:
+    ;; ({:name "Agent Smith", :language "C++", :age 40}
+    ;;  {:name "Morpheus", :rank "Captain", :age 35})
 
 ## Contact
 
