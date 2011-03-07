@@ -1,6 +1,6 @@
 ;; Copyright (C) 2011, Jozef Wagner. All rights reserved.
 ;;
-;; Disclaimer: Forked from hgavin/clojure-neo4j
+;; Disclaimer: Forked from hgavin/clojure-neo4j (no longer available).
 ;; 
 ;; Disclaimer: Small amount of comments and docs are based on official
 ;; Neo4j javadocs. 
@@ -21,18 +21,18 @@
   See project page (http://github.com/wagjo/borneo) for usage instructions,
   documentation and examples.
 
-  Code notes:
-  - Using official Neo4j bindings
-  - Not using Blueprints interface
+  Notes:
+  - Using official Neo4j bindings.
+  - Not using Blueprints interface.
   - neo-db holds the current db instance, so that users do not have
-    to supply db instance at each call to db operations. This
-    approach has of course its drawbacks (e.g. only one connection at
-    time), but I've found it suitable for my purposes.
+    to supply db instance at each call to db operations. This approach has
+    of course some drawbacks , but I've found it suitable for my purposes.
   - All mutable functions are by default wrapped in transactions. That
     means you don't have to explicitly put them in transactions. The Neo4j
     transaction model allows for fast transaction nesting, so you can easily
     have your own transaction if you have a group of mutable functions.
-    In that case just wrap functions inside with-tx."
+    In that case just wrap your functions inside with-tx.
+  - NullPointerException is thrown if there is no open connection to the db."
   (:import (org.neo4j.graphdb Direction
                               Node
                               PropertyContainer
@@ -43,29 +43,28 @@
                               Traverser$Order)
 	   (org.neo4j.kernel EmbeddedGraphDatabase)))
 
-
 ;;;; Implementation details
 
-(defonce ^{:doc "Holds the current database instance"
+(defonce ^{:doc "Holds the current database instance."
            :tag EmbeddedGraphDatabase
            :dynamic true}
   *neo-db* nil)
 
 (defn- array?
-  "Determine whether x is an array or not"
+  "Determines whether x is an array or not."
   [x]
   (when x
     (-> x class .isArray)))
 
 (defn- name-or-str
-  "If x is keyword, returns its name. If not, stringify the value"
+  "If x is keyword, returns its name. If not, stringify the value."
   [x]
   (if (keyword? x) 
     (name x) 
     (str x)))
 
 (defn- process-position
-  "Translate TraversalPosition into a map"
+  "Translates TraversalPosition into a map."
   [^TraversalPosition p]
   {:pos p
    :node (.currentNode p)
@@ -77,7 +76,7 @@
    :count (.returnedNodesCount p)})
 
 (defn- ^RelationshipType rel-type*
-  "Create java class implementing RelationshipType. Used for interop.
+  "Creates java class implementing RelationshipType. Used for interop.
   TODO: Should we cache these instances to save memory?
   Or will they be GCd?"
   [k]
@@ -86,8 +85,8 @@
 
 (defn- ^Direction rel-dir
   "Translates keyword to the respective relationship direction.
-  Valid values are :out :in and :both
-  See javadoc for Direction for more info on directions"
+  Valid values are :out :in and :both.
+  See javadoc for Direction for more info on directions."
   [k]
   (condp = k
       :out Direction/OUTGOING
@@ -99,7 +98,7 @@
   "Constructs an array or relation types and directions. Accepts
   map consisting of relation type keywords as keys and
   relation directions keywords (:in or :out) as values.
-  r canalso be a single keyword; in that case, a default :out will
+  r can also be a single keyword; in that case, a default :out will
   be added to the array."
   [r]
   (if (keyword? r)
@@ -121,11 +120,12 @@
 (defprotocol StopEvaluator
   "Protocol for stop evaluation. Used for graph traversing.
   Functions:
-  (stop-node? [this pos]) - should return true if at stop node
-                            pos will be current position map"
+  (stop-node? [this pos]) - Should return true if at stop node.
+                            pos will be current position map."
   (stop-node? [this pos]))
 
 (extend-protocol StopEvaluator
+  ;; Implements StopEvaluator for simple functions
   clojure.lang.Fn
   (stop-node? [this pos] (this pos)))
 
@@ -145,7 +145,7 @@
     (isStopNode [^TraversalPosition p] (f (process-position p)))))
 
 (defn- depth-of
-  "Return a StopEvaluator for the given traversal depth."
+  "Returns a StopEvaluator for the given traversal depth."
   [d]
   (if (== d 1) 
     org.neo4j.graphdb.StopEvaluator/DEPTH_ONE
@@ -158,7 +158,7 @@
     - :1, :2, :X (X being any positive integer) - depth of X
     - Custom function which takes one argument, current position
       and should return true when at stop node.
-    - anything extending StopEvaluator protocol
+    - Anything extending StopEvaluator protocol.
   Examples: (stop-evaluator :8)
             (stop-evaluator :1)
             (stop-evaluator :end)
@@ -174,9 +174,9 @@
 (defprotocol ReturnableEvaluator
   "Protocol for return evaluation. Used for graph traversing.
   Functions:
-  (returnable-node? [this pos]) - should return true if node should
+  (returnable-node? [this pos]) - Should return true if node should
                                   be returned. pos will be current
-                                  position map"
+                                  position map."
   (returnable-node? [this pos]))
 
 (defn- returnable-by-props
@@ -188,8 +188,10 @@
     (every? check-prop props)))
 
 (extend-protocol ReturnableEvaluator
+  ;; Implements ReturnableEvaluator for simple functions
   clojure.lang.Fn
   (returnable-node? [this pos] (this pos))
+  ;; Implements ReturnableEvaluator for property map
   clojure.lang.IPersistentMap
   (returnable-node? [this pos] (returnable-by-props this pos)))
 
@@ -228,7 +230,7 @@
 (defn start!
   "Establish a connection to the database.
   Uses *neo-db* Var to hold the connection.
-  Do not use this function, use with-db! or with-local-db! instead"
+  Do not use this function, use with-db! or with-local-db! instead."
   [path]
   (io!)
   (let [n (EmbeddedGraphDatabase. path)]
@@ -236,7 +238,7 @@
 
 (defn stop!
   "Closes a connection stored in *neo-db*.
-  Do not use this function, use with-db! or with-local-db! instead"
+  Do not use this function, use with-db! or with-local-db! instead."
   []
   (io!)
   (.shutdown *neo-db*))
@@ -286,25 +288,45 @@
        (finally (.finish tx#)))))
 
 (defn get-path
-  "Returns path to where the database is stored"
+  "Returns path to where the database is stored."
   []
   (.getStoreDir *neo-db*))
 
 (defn read-only?
-  "Returns true if database is read only"
+  "Returns true if database is read only."
   []
   (.isReadOnly *neo-db*))
 
 (defn index
-  "Returns the IndexManager paired with this graph database service"
+  "Returns the IndexManager paired with this graph database service."
   []
   (.index *neo-db*))
+
+(declare all-nodes)
+
+(declare rels)
+
+(declare delete!)
+
+(defn purge!
+  "Deletes all nodes from database together with all relationships."
+  []
+  (io!)
+  ;; first delete all relationships
+  (doseq [node (all-nodes)]
+    (with-tx
+      (doseq [r (rels node)]
+        (delete! r))))
+  (with-tx
+    ;; now delete nodes
+    (doseq [node (all-nodes)]
+      (delete! node))))
 
 ;;; Property Containers
 
 (defn prop?
   "Returns true if given node or relationship contains
-  property with a given key"
+  property with a given key."
   [^PropertyContainer c k]
   (.hasProperty c (name-or-str k)))
 
@@ -321,7 +343,7 @@
 ;; has lazy values
 
 (defn props
-  "Return map of properties for a given node or relationship.
+  "Returns map of properties for a given node or relationship.
   Fetches all properties and can be very resource consuming if node
   contains many large properties. This is a convenience function."
   [^PropertyContainer c]
@@ -387,7 +409,8 @@
 ;; javadoc)
 
 (defn rel-nodes
-  "Returns the two nodes attached to the given relationship."
+  "Returns the two nodes attached to the given relationship.
+  This is a convenience function."
   [^Relationship r]
   (.getNodes r))
 
@@ -402,7 +425,8 @@
   (.getEndNode r))
 
 (defn other-node
-  "Returns other node for given relationship."
+  "Returns other node for given relationship.
+  This is a convenience function."
   [^Relationship r ^Node node]
   (.getOtherNode r node))
 
@@ -412,14 +436,14 @@
   (keyword (.name (.getType r))))
 
 (defn create-rel!
-  "Create relationship of a supplied type between from and to nodes."
+  "Creates relationship of a supplied type between from and to nodes."
   [^Node from type ^Node to]
   (io!)
   (with-tx
     (.createRelationshipTo from to (rel-type* type))))
 
 (defn all-rel-types
-  "Returns lazy seq of all relationship types currently in database"
+  "Returns lazy seq of all relationship types currently in database."
   []
   (lazy-seq
    (.getRelationshipTypes *neo-db*)))
@@ -428,13 +452,13 @@
 
 (defn rel?
   "Returns true if there are relationships attached to this node. Syntax:
-  [node]                - All relationships
+  [node]                - All relationships.
   [node type-or-types]  - Relationships of any of specified types with
-                          any direction
+                          any direction.
   [node type direction] - Relationships of specified type and
                           of specified direction. You can supply nil for
                           one of the arguments if you do not care for
-                          either direction of relationship type
+                          either direction of relationship type.
   Valid directions are :in :out and :both, parameter type can be any keyword.
   Examples: (rel? node)                  ; All rels
             (rel? node :foo)             ; Rels of :foo type of any direction
@@ -457,13 +481,13 @@
 
 (defn rels
   "Returns relationships attached to this node. Syntax:
-  [node]                - All relationships
+  [node]                - All relationships.
   [node type-or-types]  - Relationships of any of specified types with
-                          any direction
+                          any direction.
   [node type direction] - Relationships of specified type and
                           of specified direction. You can supply nil for
                           one of the arguments if you do not care for
-                          either direction of relationship type
+                          either direction of relationship type.
   Valid directions are :in :out and :both, parameter type can be any keyword.
   Examples: (rels node)                  ; All rels
             (rels node :foo)             ; Rels of :foo type of any direction
@@ -487,7 +511,7 @@
 (defn single-rel 
   "Returns the only relationship for the node of the given type and
   direction.
-  Valid directions are :in :out and :both, defaults to :out"
+  Valid directions are :in :out and :both, defaults to :out."
   ([^Node node type]
      (single-rel node type :out))
   ([^Node node type direction]
@@ -509,7 +533,8 @@
 (defn create-child!
   "Creates a node that is a child of the specified parent node
   (or root node) along the specified relationship.
-  props is a map that defines the properties of the node."
+  props is a map that defines the properties of the node.
+  This is a convenience function."
   ([type props]
      (create-child! (root) type props))
   ([node type props]
@@ -520,7 +545,8 @@
          child))))
 
 (defn delete-node!
-  "Delete node and all its relationships."
+  "Delete node and all its relationships.
+  This is a convenience function."
   [node]
   (io!)
   (with-tx
@@ -568,7 +594,7 @@
   (.getReferenceNode *neo-db*))
 
 (defn walk
-  "Walk through the graph by following specified relations. Returns last node.
+  "Walks through the graph by following specified relations. Returns last node.
   Throws NullPointerException if path is wrong.
   Throws NotFoundException if path is ambiguous."
   [^Node node & types]
@@ -577,25 +603,25 @@
     (reduce next-node node types)))
 
 (defn traverse 
-  "Traverse the graph. Starting at the given node, traverse the graph
+  "Traverses the graph. Starting at the given node, traverse the graph
   in specified order, stopping based on stop-eval. The return-eval
   decides which nodes make it into the result. The rel is used to
   decide which edges to traverse.
   order - :breadth, :depth. Will be :depth if nil supplied.
   stop-eval accepts following values:
-    - :end or nil - end of graph
-    - :1, :2, :X (X being any positive integer) - depth of X
+    - :end or nil - End of graph.
+    - :1, :2, :X (X being any positive integer) - Depth of X.
     - Custom function which takes one argument, current position
       and should return true when at stop node.
   return-eval accepts following values:
-    - :all-but-start or nil  - all but start nodes
-    - :all - all nodes
+    - :all-but-start or nil  - all but start nodes.
+    - :all - all nodes.
     - Custom function which takes one argument, current position map
       and should return true when node at current position should be returned.
     - Map defining key-value pairs that will be matched against
       properties of wanna-be returned nodes.
-  rel - a keyword representing relation type or a map where keys are
-        relation type keywords and values are directions (:in or :out)"
+  rel - Keyword representing relation type or a map where keys are
+        relation type keywords and values are directions (:in or :out)."
   ([^Node node rel]
      (traverse node nil nil nil rel))
   ([^Node node return-eval rel]
@@ -616,35 +642,4 @@
 
   ;; See README for usage instructions, documentation and examples.
 
-  (start! "neo-db")
-
-  (stop!)
-
-  (defn a [pos] true)
-
-  (deftype X [depth]
-    StopEvaluator
-    (stop-node? [this pos] (println "ahoj" depth pos) false))
-
-  (deftype Y [uid]
-    ReturnableEvaluator
-    (returnable-node? [this pos] (= uid (prop (:node pos) :uid))))
-
-  (take 3 (traverse (root)
-                    :depth
-                    (X. 3)
-                    :all
-                    {:users :out :user :out :itests :out}))
-
-  (map props (traverse (root)
-                       {:uid "jw817dk"}
-                       {:users :out :user :out}))
-
-  (map props (traverse (root)
-                       (Y. "jw817dk")
-                       {:users :out :user :out}))
-
-  (count (traverse (walk (root) :users)
-                   :user))
-  
 )
