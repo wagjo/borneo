@@ -9,73 +9,83 @@ use Blueprints interface.
 ## Rationale
 
 I've decided to create my own Neo4j wrapper, because I was not happy
-with the current state (01/2011) of existing ones. While I initially
+with the current state _(01/2011)_ of existing ones. While I initially
 forked from late 
 [hgavin/clojure-neo4j](http://github.com/hgavin/clojure-neo4j), I
 quickly realized that drastic changes will be needed. This chapter
 summarizes my motivation behind changes and decisions I made.
 
-I believe that wrappers are a sub-optimal solution. See some recent
-Clojure talks on protocols where they compare wrappers, monkey
-patching and protocols. Main problem with wrappers is that they are no
-longer original types so you will not be able to use existing
-functions which accept original type. That is why borneo works mainly
-with Neo4j classes (Node, Relationship), and does not automatically
-convert nodes to property maps.
+I believe that adapters are a sub-optimal solution (see
+[Chris Housers talk on the Expression
+Problem](http://www.infoq.com/presentations/Clojure-Expression-Problem)). Problem
+with adapters is that they are no longer original types so you will 
+not be able to use existing functions which accept original type. That
+is why borneo works mainly with Neo4j classes _(Node,
+Relationship)_, and does not automatically convert nodes to property
+maps. 
 
 It is tedious to provide a connection for every operation on
 database. That is why I chose to have a dedicated Var for storing
 current connection. That of course brings several problems to the
 scene. Sometimes you want to have a connection which is shared between
 threads and sometimes you want to have parallel connections to
-multiple databases. (Embedded Neo4j does not allow for parallel
-connections to single database). Both cases are supported in
-borneo. You can use with-db! for a connection accessible from every
-thread, and by using with-local-db!, you can have a tread local
-connection. One drawback is that you cannot have both at one moment,
-so be careful.
+multiple databases. _(Embedded Neo4j does not allow for parallel
+connections to single database)_. Both cases are supported in
+borneo. You can use
+[with-db!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-db!)
+for a connection accessible from every thread, and by using
+[with-local-db!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-local-db!),
+you can have a thread local connection. One drawback is that you
+cannot have both at one moment, so be careful.
 
-Because I like simple things (see Halloways talk on simplicity), I
-tried to provide functions that do simple things, simple. That is why
-properties handling function are divided into two separate ones, one for
-reading and one for mutating. I also provide some "compound"
-functions, like props, create-child! or delete-node!, but they are
-here only for convenience and their simple counterparts are also
-provided. 
+Because I like simple things _(see [Stuart Halloways talk on
+simplicity](http://clojure.blip.tv/file/4824610/))_, I tried to
+provide simple functions. That is why properties handling function are
+divided into two separate ones, one for reading and one for
+mutating. I also provide some "compound" functions, like
+[props](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/props), 
+[create-child!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/create-child!)
+or
+[delete-node!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/delete-node!),
+but they are here only for convenience and their simple counterparts
+are also provided. 
 
-While mentioned in previous section, I'd like to stress that I
-consider separation of mutable and immutable world very important in
+While mentioned in previous section, I'd like to stress that
+separation of mutable and immutable world is very important in
 Clojure. That is why all mutable functions in borneo are clearly
 separated from their read-only parts and cannot be used in
-transactions.
+Clojure transactions.
 
 I have added support for custom Returnable and Stop evaluators through
-protocols. I think it will allow for greater flexibility (see last
-example at the bottom of this page).
+protocols. I think it will allow for greater flexibility _(see last
+example at the bottom of this page)_.
 
 Another thing I wanted very much in a Neo4j wrapper was to use
 keywords instead of custom static types/enums, to feel more like you
 are in Clojure and not in Java... It turned out to be fairly easy to
 implement.
 
-All mutable operations are automatically wrapped in transactions (read
-only operations don't need transactions in recent Neo4j). By the way
+All mutable operations are automatically wrapped in transactions _(read
+only operations don't need transactions in recent Neo4j)_. By the way
 Neo4j handles transactions, it should be pretty cheap to have nested
-transactions so you can use with-tx to group mutable operations into
-one big transactions if you need it. Needs some field testing to prove
-this design decision though.
+transactions so you can use
+[with-tx](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-tx)
+to group mutable operations into one big transactions if you need
+it. Needs some field testing to prove this design decision though.
 
-If you get properties for a node with props function, you fetch all
-properties at once. This may be very resource intensive, when you have
-large binary data stored in nodes properties. One big wish I had is to
-have some king of lazy PersistentMap, where value would be fetched on
-demand. I've thougt of using delay/lazy-seq on values to achieve that,
+If you get properties for a node with
+[props](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/props)
+function, you fetch all properties at once. This may be very resource
+intensive, when you have large binary data stored in nodes
+properties. One big wish I had is to have some king of lazy
+PersistentMap, where value would be fetched on demand. I've thougt of
+using delay/lazy-seq on values to achieve that, 
 but user would have to manually deref the value, which is not very
-intuitive and does not look good. I didn't have time to implement such
-lazy map by myself yet. This data structure could also allow for even
-less intrusive interface so you could work with data stored in Neo4j
-more like working with traditional Clojure map, without serious
-performance impact. Who knows. More hammock time needed.
+intuitive and does not look good. This data structure could also allow
+for even less intrusive interface so you could work with data stored
+in Neo4j more like working with traditional Clojure map, without
+serious performance impact. I didn't have time to seriously think
+about this approach yet. More hammock time needed.
 
 ## Usage
 
