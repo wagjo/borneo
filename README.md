@@ -237,7 +237,7 @@ Want to find Mr. Andersons node, assuming I don't have one:
 
     (def the-one (first (neo/traverse (neo/walk (neo/root) :humans)
                                       {:name "Thomas Anderson"}
-                                      {:human :out})))
+                                      :human)))
     ;; Or if I want to traverse from root
     (def the-one (first (neo/traverse (neo/root)
                                       {:name "Thomas Anderson"}
@@ -291,25 +291,19 @@ Get incoming relationships only:
 Who does Anderson know?:
 
     (map #(neo/prop % :name)
-         (neo/traverse the-one
-                       :1 nil
-                       {:knows :out}))
+         (neo/traverse the-one :1 nil :knows))
     ;; ("Trinity" "Morpheus")
 
 Go one level deeper:
 
     (map #(neo/prop % :name)
-         (neo/traverse the-one
-                       :2 nil
-                       {:knows :out}))
+         (neo/traverse the-one :2 nil :knows))
     ;; ("Trinity" "Morpheus" "Cypher")
 
 Go all the way down:
 
     (map #(neo/prop % :name)
-         (neo/traverse the-one
-                       nil nil
-                       {:knows :out}))
+         (neo/traverse the-one nil nil :knows))
     ;; ("Trinity" "Morpheus" "Cypher" "Agent Smith" "Architect")
 
 Return every human who does not have his age set. Create a
@@ -323,20 +317,19 @@ custom returnable evaluator function first:
 Now find every human without his age set:
 
     (map neo/props (neo/traverse (neo/walk (neo/root) :humans)
-                                 age-not-present?
-                                 {:human :out}))
+                                 age-not-present? :human))
     ;; ({:name "Cypher"})
 
 Return anybody between specified age range. Create
 custom return evaluator:
 
-    (defrecord AgeRangeEvaluator [from to]
+    (deftype AgeRangeEvaluator [from to]
       neo/ReturnableEvaluator
       (returnable-node? [this pos] (let [age (neo/prop (:node pos) :age)]
                                      (when age
                                        (and
-                                        (>= age (:from this))
-                                        (<= age (:to this)))))))
+                                        (>= age from)
+                                        (<= age to))))))
 
 Traverse:
 

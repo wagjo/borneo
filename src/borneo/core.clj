@@ -56,12 +56,33 @@
   (when x
     (-> x class .isArray)))
 
-(defn- name-or-str
-  "If x is keyword, returns its name. If not, stringify the value."
-  [x]
-  (if (keyword? x) 
-    (name x) 
-    (str x)))
+(defn- encode-property-key
+  "Encodes property key. If x is keyword, store its name."
+  [value]
+  (if (keyword? value) 
+    (name value) 
+    value))
+
+(defn- decode-property-key
+  "Decodes property key. Always convert property key to the keyword."
+  [value]
+  (keyword value))
+
+(defn- encode-property-value
+  "Encodes property value. If value is a keyword, store it as a string."
+  [value]
+  (if (keyword? value)
+    (str value)
+    value))
+
+(defn- decode-property-value
+  "Decodes property value.
+  If value is string begining with colon, interpret it as a keyword."
+  [value]
+  (if (and (string? value)
+           (= \: (first value)))
+    (keyword (subs value 1))
+    value))
 
 (defn- process-position
   "Translates TraversalPosition into a map."
@@ -179,12 +200,13 @@
                                   position map."
   (returnable-node? [this pos]))
 
+(declare prop)
+
 (defn- returnable-by-props
-  "Returns nodes that match the specified property values. propmap is a map
-  that defines key value pairs that ReturnableEvaluator should match on."
+  "Test if node properties at given position matches a given props map."
   [props pos]
   (let [^Node node (:node pos)
-        check-prop (fn [[k v]] (= v (.getProperty node (name-or-str k) nil)))]
+        check-prop (fn [[k v]] (= v (prop node k)))]
     (every? check-prop props)))
 
 (extend-protocol ReturnableEvaluator
@@ -328,16 +350,18 @@
   "Returns true if given node or relationship contains
   property with a given key."
   [^PropertyContainer c k]
-  (.hasProperty c (name-or-str k)))
+  (.hasProperty c (encode-property-key k)))
 
 (defn prop
   "Returns property value based on its key.
-  If property is not found, returns nil."
+  If property is not found, returns nil.
+  If property value is string which starts with colon,
+  it is converted to keyword."
   [^PropertyContainer c k]
-  (let [v (.getProperty c (name k) nil)]
+  (let [v (.getProperty c (encode-property-key k) nil)]
     (if (array? v) ; handle multiple values
-      (seq v)
-      v)))
+      (map decode-property-value v)
+      (decode-property-value v))))
 
 ;; TODO: add fns which are less resource consuming :), like map which
 ;; has lazy values
@@ -345,7 +369,9 @@
 (defn props
   "Returns map of properties for a given node or relationship.
   Fetches all properties and can be very resource consuming if node
-  contains many large properties. This is a convenience function."
+  contains many large properties. This is a convenience function.
+  If property value is string which starts with colon,
+  is is converted to keyword."
   [^PropertyContainer c]
   (let [keys (.getPropertyKeys c)
         convert-fn (fn [k] [(keyword k) (prop c k)])]
@@ -353,7 +379,8 @@
 
 (defn set-prop!
   "Sets or remove property for a given node or relationship.
-  The property value must be one of the valid property types (see Neo4j docs).
+  The property value must be one of the valid property types 
+  (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship."
   ([^PropertyContainer c key]
@@ -362,16 +389,16 @@
      (io!)
      (with-tx
        (if value
-         ;; TODO: better support primivives and arrays of primitives
-         (.setProperty c (name-or-str key)
+         (.setProperty c (encode-property-key key)
                        (if (coll? value) ; handle multiple values
-                         (into-array String value)
-                         value))
-         (.removeProperty c (name-or-str key))))))
+                         (into-array (map encode-property-value value))
+                         (encode-property-value value)))
+         (.removeProperty c (encode-property-key key))))))
 
 (defn set-props!
   "Sets properties for a given node or relationship.
-  The property value must be one of the valid property types (see Neo4j docs).
+  The property value must be one of the valid property types 
+  (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship. This is a convenience function."
   [^PropertyContainer c props]
