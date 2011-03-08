@@ -330,6 +330,10 @@
 
 (declare delete!)
 
+(declare get-id)
+
+(declare root)
+
 (defn purge!
   "Deletes all nodes from database together with all relationships."
   []
