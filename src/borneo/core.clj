@@ -340,9 +340,11 @@
       (doseq [r (rels node)]
         (delete! r))))
   (with-tx
-    ;; now delete nodes
-    (doseq [node (all-nodes)]
-      (delete! node))))
+    ;; now delete nodes, except reference node
+    (let [reference-node-id (get-id (root))]
+      (doseq [node (all-nodes)]
+        (when-not (= reference-node-id (get-id node))
+          (delete! node))))))
 
 ;;; Property Containers
 
