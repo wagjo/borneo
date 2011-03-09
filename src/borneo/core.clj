@@ -101,8 +101,8 @@
   TODO: Should we cache these instances to save memory?
   Or will they be GCd?"
   [k]
-  (proxy [RelationshipType] []
-    (name [] (name k))))
+  (reify RelationshipType
+    (^String name [this] (name k))))
 
 (defn- ^Direction rel-dir
   "Translates keyword to the respective relationship direction.
@@ -153,24 +153,10 @@
 (defn- stop-with-protocol
   "Custom StopEvaluator which dispatch on StopEvaluator protocol."
   [f]
-  (proxy [org.neo4j.graphdb.StopEvaluator] []
-    (isStopNode [^TraversalPosition p]
-                (or (stop-node? f (process-position p))
-                    false))))          ; nil is not valid return value
-
-(defn- stop-if
-  "Custom StopEvaluator, f should return true when at stop node. f takes one
-  argument. The function will be passed the current position map to act on."
-  [f]
-  (proxy [org.neo4j.graphdb.StopEvaluator] []
-    (isStopNode [^TraversalPosition p] (f (process-position p)))))
-
-(defn- depth-of
-  "Returns a StopEvaluator for the given traversal depth."
-  [d]
-  (if (== d 1) 
-    org.neo4j.graphdb.StopEvaluator/DEPTH_ONE
-    (stop-if #(>= (:depth %) d))))
+  (reify org.neo4j.graphdb.StopEvaluator
+    (^boolean isStopNode [this ^TraversalPosition p]
+              (or (stop-node? f (process-position p))
+                  false))))            ; nil is not valid return value
 
 (defn- stop-evaluator
   "Translates value to the respective stop evaluator.
@@ -189,7 +175,9 @@
   [e]  
   (cond
    (or (= :end e) (nil? e)) org.neo4j.graphdb.StopEvaluator/END_OF_GRAPH
-   (keyword? e) (depth-of (Integer/parseInt (name e)))
+   (= :1 e) org.neo4j.graphdb.StopEvaluator/DEPTH_ONE
+   (keyword? e) (let [d (Integer/parseInt (name e))]
+                  (stop-with-protocol #(>= (:depth %) d)))
    :else (stop-with-protocol e)))
 
 (defprotocol ReturnableEvaluator
@@ -202,28 +190,24 @@
 
 (declare prop)
 
-(defn- returnable-by-props
-  "Test if node properties at given position matches a given props map."
-  [props pos]
-  (let [^Node node (:node pos)
-        check-prop (fn [[k v]] (= v (prop node k)))]
-    (every? check-prop props)))
-
 (extend-protocol ReturnableEvaluator
   ;; Implements ReturnableEvaluator for simple functions
   clojure.lang.Fn
   (returnable-node? [this pos] (this pos))
   ;; Implements ReturnableEvaluator for property map
   clojure.lang.IPersistentMap
-  (returnable-node? [this pos] (returnable-by-props this pos)))
+  (returnable-node? [this pos] (let [^Node node (:node pos)
+                                     check-prop (fn [[k v]]
+                                                  (= v (prop node k)))]
+                                 (every? check-prop this))))
 
 (defn- returnable-with-protocol
   "Custom ReturnableEvaluator which dispatch on ReturnableEvaluator protocol."
   [f]
-  (proxy [org.neo4j.graphdb.ReturnableEvaluator] []
-    (isReturnableNode [^TraversalPosition p]
-                      (or (returnable-node? f (process-position p))
-                          false))))     ; nil is not valid return value
+  (reify org.neo4j.graphdb.ReturnableEvaluator
+    (^boolean isReturnableNode [this ^TraversalPosition p]
+              (or (returnable-node? f (process-position p))
+                  false))))            ; nil is not valid return value
 
 (defn- returnable-evaluator
   "Translates value to the respective returnable evaluator.
@@ -365,7 +349,7 @@
   it is converted to keyword."
   [^PropertyContainer c k]
   (let [v (.getProperty c (encode-property-key k) nil)]
-    (if (array? v) ; handle multiple values
+    (if (array? v)                      ; handle multiple values
       (map decode-property-value v)
       (decode-property-value v))))
 
@@ -673,6 +657,186 @@
 
 (comment
 
-  ;; See README for usage instructions, documentation and examples.
+;;; See README for usage instructions, documentation and examples.
+
+  (start! "test-db")
+
+  (all-nodes)
+
+  (stop!)
+
+  (purge!)
+
+  (require ['borneo.core :as 'neo])
+
+;;; Populate database with graph inspired by Neo4j Matrix social graph (for simplicity I do not check if graph already exists):
+
+  (do
+    ;; basic layout
+    (def humans (neo/create-child! :humans nil))
+    (def programs (neo/create-child! :programs nil))
+
+    ;; add programs
+    (def smith (neo/create-child! programs :program
+                                  {:name "Agent Smith"
+                                   :language "C++"
+                                   :age 40}))
+    (def architect (neo/create-child! programs :program
+                                      {:name "Architect"
+                                       :language "Clojure"
+                                       :age 600}))
+
+    ;; add humans
+    (def the-one (neo/create-child! humans :human
+                                    {:name "Thomas Anderson"
+                                     :age 29}))
+    (def trinity (neo/create-child! humans :human
+                                    {:name "Trinity"
+                                     :age 27}))
+    (def morpheus (neo/create-child! humans :human
+                                     {:name "Morpheus"
+                                      :rank "Captain"
+                                      :age 35}))
+    (def cypher (neo/create-child! humans :human
+                                   {:name "Cypher"}))
+
+    ;; add relationships
+
+    (neo/create-rel! the-one :knows trinity)
+    (neo/create-rel! the-one :knows morpheus)
+    (neo/create-rel! morpheus :knows trinity)
+    (neo/create-rel! morpheus :knows cypher)
+    (neo/set-props! (neo/create-rel! cypher :knows smith)
+                    {:disclosure "secret"
+                     :age 6})
+    (neo/create-rel! smith :knows architect)
+    (neo/create-rel! trinity :loves the-one))
+  
+;;; Basic traversal:
+  
+;;; Assuming I do not have any previous references to nodes.
+;;; Get me all human nodes:
+
+  (let [humans (neo/walk (neo/root) :humans)]
+    (neo/traverse humans :human))
+  ;; evals to:
+  ;; (#<NodeProxy Node[5]> #<NodeProxy Node[6]>
+  ;;  #<NodeProxy Node[7]> #<NodeProxy Node[8]>)
+  
+;;; I want to see their properties:
+
+  (let [human-nodes (neo/traverse (neo/walk (neo/root) :humans) :human)]
+    (map neo/props human-nodes))
+  ;; evals to:
+  ;; ({:name "Thomas Anderson", :age 29}
+  ;;  {:name "Trinity", :age 27}
+  ;;  {:name "Morpheus", :rank "Captain", :age 35}
+  ;;  {:name "Cypher"})
+  
+;;; Want to find Mr. Andersons node, assuming I don't have one:
+
+  (def the-one (first (neo/traverse (neo/walk (neo/root) :humans)
+                                    {:name "Thomas Anderson"}
+                                    :human)))
+  ;; Or if I want to traverse from root
+  (def the-one (first (neo/traverse (neo/root)
+                                    {:name "Thomas Anderson"}
+                                    {:humans :out
+                                     :human :out})))
+  
+;;; Properties and Relationships:
+
+;;; Andersons properties (this fetches all properties and may be resource intensive if node has e.g. large binary properties):
+
+  (neo/props the-one)
+  ;; evals to:
+  ;; {:name "Thomas Anderson", :age 29}
+  
+;;; Andersons age:
+
+  (neo/prop the-one :age)
+  ;; evals to:
+  ;; 29
+  
+;;; Andersons relationships:
+
+  (neo/rels the-one)
+  ;; evals to:
+  ;; (#<RelationshipProxy Relationship[4]>
+  ;;  #<RelationshipProxy Relationship[8]>
+  ;;  #<RelationshipProxy Relationship[9]>
+  ;;  #<RelationshipProxy Relationship[14]>)
+  
+;;; But I want to see their types:
+
+  (map neo/rel-type (neo/rels the-one))
+  ;; evals to:
+  ;; (:human :knows :knows :loves)
+  
+;;; Get :knows or :loves type relationships:
+
+  (neo/rels the-one [:knows :loves])
+  
+;;; Get love relationships only:
+
+  (neo/rels the-one :loves)
+  
+;;; Get incoming relationships only:
+
+  (neo/rels the-one nil :in)
+  
+;;; Advanced Traversal
+
+;;; Who does Anderson know?:
+
+  (map #(neo/prop % :name)
+       (neo/traverse the-one :1 nil :knows))
+  ;; ("Trinity" "Morpheus")
+  
+;;; Go one level deeper:
+
+  (map #(neo/prop % :name)
+       (neo/traverse the-one :2 nil :knows))
+  ;; ("Trinity" "Morpheus" "Cypher")
+  
+;;; Go all the way down:
+
+  (map #(neo/prop % :name)
+       (neo/traverse the-one nil nil :knows))
+  ;; ("Trinity" "Morpheus" "Cypher" "Agent Smith" "Architect")
+  
+;;; Return every human who does not have his age set. Create a custom returnable evaluator function first:
+
+  (defn age-not-present? [pos]
+    (and
+     (not (:start? pos))                ; eliminate start node
+     (not (neo/prop (:node pos) :age))))
+  
+;;; Now find every human without his age set:
+
+  (map neo/props (neo/traverse (neo/walk (neo/root) :humans)
+                               age-not-present? :human))
+  ;; ({:name "Cypher"})
+  
+;;; Return anybody between specified age range. Create custom return evaluator:
+
+  (deftype AgeRangeEvaluator [from to]
+    neo/ReturnableEvaluator
+    (returnable-node? [this pos] (let [age (neo/prop (:node pos) :age)]
+                                   (when age
+                                     (and
+                                      (>= age from)
+                                      (<= age to))))))
+;;; Traverse:
+
+  (map neo/props (neo/traverse (neo/root)
+                               (AgeRangeEvaluator. 30 40)
+                               {:humans :out
+                                :human :out
+                                :programs :out
+                                :program :out}))
+  ;; evals to:
+  ;; ({:name "Agent Smith", :language "C++", :age 40}
+  ;;  {:name "Morpheus", :rank "Captain", :age 35})  
 
 )
