@@ -1,4 +1,4 @@
-(defproject borneo "0.1.0-SNAPSHOT" 
+(defproject borneo "0.2.0-SNAPSHOT" 
   :description "Clojure wrapper for Neo4j, a graph database."
   :dependencies [[org.clojure/clojure "1.2.0"]
                  [org.neo4j/neo4j "1.2"]]

@@ -91,7 +91,7 @@ about this approach yet. More hammock time needed.
 
 Add the following dependency to your project.clj file:
 
-    [borneo "0.1.0-SNAPSHOT"]
+    [borneo "0.1.0"]
 
 ## Documentation
 
