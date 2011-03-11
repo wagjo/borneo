@@ -35,6 +35,7 @@
   - NullPointerException is thrown if there is no open connection to the db."
   (:import (org.neo4j.graphdb Direction
                               Node
+                              NotFoundException
                               PropertyContainer
                               Relationship
                               RelationshipType
@@ -594,16 +595,20 @@
   (lazy-seq (.getAllNodes *neo-db*)))
 
 (defn node-by-id
-  "Returns node with a given id.
+  "Returns node with a given id, or nil if no such node exists.
   Note that ids are not very good as unique identifiers."
   [id]
-  (.getNodeById *neo-db* id))
+  (try
+    (.getNodeById *neo-db* id)
+  (catch NotFoundException e nil)))
 
 (defn rel-by-id
-  "Returns relationship with a given id.
+  "Returns relationship with a given id, or nil if no such relationship exists.
   Note that ids are not very good as unique identifiers."
   [id]
-  (.getRelationshipById *neo-db* id))
+  (try
+    (.getRelationshipById *neo-db* id)
+  (catch NotFoundException e nil)))
 
 (defn root
   "Returns reference/root node."
