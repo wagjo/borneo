@@ -379,7 +379,7 @@
   ([^PropertyContainer c key value]
      (io!)
      (with-tx
-       (if value
+       (if (not (nil? value))
          (.setProperty c (encode-property-key key)
                        (if (coll? value) ; handle multiple values
                          (into-array (map encode-property-value value))
