@@ -1,7 +1,7 @@
 (defproject borneo "0.3.0" 
   :description "Clojure wrapper for Neo4j, a graph database."
-  :dependencies [[org.clojure/clojure "1.3.0"]
-                 [org.neo4j/neo4j "1.4"]]
+  :dependencies [[org.clojure/clojure "1.5.1"]
+                 [org.neo4j/neo4j "1.9"]]
   :dev-dependencies [[org.clojars.rayne/autodoc "0.8.0-SNAPSHOT"]]
   :jvm-opts ["-Dswank.encoding=utf-8"]
   :autodoc {:copyright "Copyright (C) 2011, Jozef Wagner. All rights reserved."

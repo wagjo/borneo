@@ -34,6 +34,7 @@
     In that case just wrap your functions inside with-tx.
   - NullPointerException is thrown if there is no open connection to the db."
   (:import (org.neo4j.graphdb Direction
+                              GraphDatabaseService
                               Node
                               NotFoundException
                               PropertyContainer
@@ -42,12 +43,12 @@
                               Transaction
                               TraversalPosition
                               Traverser$Order)
-	   (org.neo4j.kernel EmbeddedGraphDatabase)))
+	   (org.neo4j.graphdb.factory GraphDatabaseFactory)))
 
 ;;;; Implementation details
 
 (defonce ^{:doc "Holds the current database instance."
-           :tag EmbeddedGraphDatabase
+           :tag GraphDatabaseService
            :dynamic true}
   *neo-db* nil)
 
@@ -240,7 +241,7 @@
   Do not use this function, use with-db! or with-local-db! instead."
   [path]
   (io!)
-  (let [n (EmbeddedGraphDatabase. path)]
+  (let [n (.newEmbeddedDatabase (GraphDatabaseFactory.) path)]
     (alter-var-root #'*neo-db* (fn [_] n))))
 
 (defn stop!
@@ -275,7 +276,7 @@
   [path & body]
   (io!)
   ;; Using binding macro, db is accessible only in this thread
-  `(binding [*neo-db* (EmbeddedGraphDatabase. ~path)]
+  `(binding [*neo-db* (.newEmbeddedDatabase (GraphDatabaseFactory.) path)]
      (try
        ~@body
        (finally (stop!)))))
