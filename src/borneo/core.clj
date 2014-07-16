@@ -1,11 +1,11 @@
 ;; Copyright (C) 2011, Jozef Wagner. All rights reserved.
 ;;
 ;; Disclaimer: Forked from hgavin/clojure-neo4j (no longer available).
-;; 
-;; Disclaimer: Small amount of comments and docs are based on official
-;; Neo4j javadocs. 
 ;;
-;; The use and distribution terms for this software are covered by the 
+;; Disclaimer: Small amount of comments and docs are based on official
+;; Neo4j javadocs.
+;;
+;; The use and distribution terms for this software are covered by the
 ;; Eclipse Public License 1.0
 ;; (http://opensource.org/licenses/eclipse-1.0.php) which can be found
 ;; in the file epl-v10.html at the root of this distribution.
@@ -34,7 +34,9 @@
     In that case just wrap your functions inside with-tx.
   - NullPointerException is thrown if there is no open connection to the db."
   (:import (org.neo4j.graphdb Direction
+                              DynamicLabel
                               GraphDatabaseService
+                              Label
                               Node
                               NotFoundException
                               PropertyContainer
@@ -68,8 +70,8 @@
 (defn- encode-property-key
   "Encodes property key. If x is keyword, store its name."
   [value]
-  (if (keyword? value) 
-    (name value) 
+  (if (keyword? value)
+    (name value)
     value))
 
 (defn- decode-property-key
@@ -132,7 +134,7 @@
   be added to the array."
   [r]
   (if (keyword? r)
-    (rel-dir-map {r :out})   
+    (rel-dir-map {r :out})
     (into-array Object
                 (mapcat (fn [[k v]] [(rel-type* k) (rel-dir v)])
                         r))))
@@ -181,7 +183,7 @@
             (stop-evaluator nil)
             (stop-evaluator custom-fn)
   See javadoc for StopEvaluator for more info."
-  [e]  
+  [e]
   (cond
    (or (= :end e) (nil? e)) org.neo4j.graphdb.StopEvaluator/END_OF_GRAPH
    (= :1 e) org.neo4j.graphdb.StopEvaluator/DEPTH_ONE
@@ -381,7 +383,7 @@
 
 (defn set-prop!
   "Sets or remove property for a given node or relationship.
-  The property value must be one of the valid property types 
+  The property value must be one of the valid property types
   (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship."
@@ -399,7 +401,7 @@
 
 (defn set-props!
   "Sets properties for a given node or relationship.
-  The property value must be one of the valid property types 
+  The property value must be one of the valid property types
   (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship. This is a convenience function."
@@ -477,6 +479,20 @@
   (lazy-seq
    (.getRelationshipTypes *neo-db*)))
 
+
+;;; Labels
+
+(defn label!
+  "Creates a label with the supplied name"
+  [name]
+  (DynamicLabel/label name))
+
+ (defn label?
+   [^Node node labelName]
+   (with-tx
+     (.hasLabel node (label! labelName))))
+
+
 ;;; Nodes
 
 (defn rel?
@@ -537,7 +553,7 @@
       (nil? direction) (rels node type)
       :else (seq (.getRelationships node (rel-type* type) (rel-dir direction))))))
 
-(defn single-rel 
+(defn single-rel
   "Returns the only relationship for the node of the given type and
   direction.
   Valid directions are :in :out and :both, defaults to :out."
@@ -547,15 +563,13 @@
      (.getSingleRelationship node (rel-type* type) (rel-dir direction))))
 
 (defn create-node!
-  "Creates a new node, not linked with any other nodes."
-  ([]
-     (io!)
-     (with-tx
-       (.createNode *neo-db*)))
-  ([props]
-     (with-tx
-       (doto (create-node!)
-         (set-props! props)))))
+  "Creates a new node, not linked with any other nodes.
+  Labels can optionally be provided to add to the node."
+  [& labelNames]
+  (io!)
+  (with-tx
+    (.createNode *neo-db*
+                 (into-array Label (map label! labelNames)))))
 
 (declare root)
 
@@ -582,6 +596,7 @@
     (doseq [r (rels node)]
       (delete! r))
     (delete! node)))
+
 
 ;;; Graph traversal helpers
 
@@ -635,7 +650,7 @@
                     (second (rel-nodes (single-rel node type))))]
     (reduce next-node node types)))
 
-(defn traverse 
+(defn traverse
   "Traverses the graph. Starting at the given node, traverse the graph
   in specified order, stopping based on stop-eval. The return-eval
   decides which nodes make it into the result. The rel is used to
@@ -672,7 +687,7 @@
 ;;; Cypher queries
 
 (defn cypher
-  "Returns lazy-seq of results from query"
+  "Returns lazy-seq of results from a Cypher query"
   ([query] (lazy-seq (.execute *exec-eng* query)))
   ([query params] (lazy-seq (.execute *exec-eng*
                                       query
@@ -736,9 +751,9 @@
                      :age 6})
     (neo/create-rel! smith :knows architect)
     (neo/create-rel! trinity :loves the-one))
-  
+
 ;;; Basic traversal:
-  
+
 ;;; Assuming I do not have any previous references to nodes.
 ;;; Get me all human nodes:
 
@@ -747,7 +762,7 @@
   ;; evals to:
   ;; (#<NodeProxy Node[5]> #<NodeProxy Node[6]>
   ;;  #<NodeProxy Node[7]> #<NodeProxy Node[8]>)
-  
+
 ;;; I want to see their properties:
 
   (let [human-nodes (neo/traverse (neo/walk (neo/root) :humans) :human)]
@@ -757,7 +772,7 @@
   ;;  {:name "Trinity", :age 27}
   ;;  {:name "Morpheus", :rank "Captain", :age 35}
   ;;  {:name "Cypher"})
-  
+
 ;;; Want to find Mr. Andersons node, assuming I don't have one:
 
   (def the-one (first (neo/traverse (neo/walk (neo/root) :humans)
@@ -768,7 +783,7 @@
                                     {:name "Thomas Anderson"}
                                     {:humans :out
                                      :human :out})))
-  
+
 ;;; Properties and Relationships:
 
 ;;; Andersons properties (this fetches all properties and may be resource intensive if node has e.g. large binary properties):
@@ -776,13 +791,13 @@
   (neo/props the-one)
   ;; evals to:
   ;; {:name "Thomas Anderson", :age 29}
-  
+
 ;;; Andersons age:
 
   (neo/prop the-one :age)
   ;; evals to:
   ;; 29
-  
+
 ;;; Andersons relationships:
 
   (neo/rels the-one)
@@ -791,25 +806,25 @@
   ;;  #<RelationshipProxy Relationship[8]>
   ;;  #<RelationshipProxy Relationship[9]>
   ;;  #<RelationshipProxy Relationship[14]>)
-  
+
 ;;; But I want to see their types:
 
   (map neo/rel-type (neo/rels the-one))
   ;; evals to:
   ;; (:human :knows :knows :loves)
-  
+
 ;;; Get :knows or :loves type relationships:
 
   (neo/rels the-one [:knows :loves])
-  
+
 ;;; Get love relationships only:
 
   (neo/rels the-one :loves)
-  
+
 ;;; Get incoming relationships only:
 
   (neo/rels the-one nil :in)
-  
+
 ;;; Advanced Traversal
 
 ;;; Who does Anderson know?:
@@ -817,32 +832,32 @@
   (map #(neo/prop % :name)
        (neo/traverse the-one :1 nil :knows))
   ;; ("Trinity" "Morpheus")
-  
+
 ;;; Go one level deeper:
 
   (map #(neo/prop % :name)
        (neo/traverse the-one :2 nil :knows))
   ;; ("Trinity" "Morpheus" "Cypher")
-  
+
 ;;; Go all the way down:
 
   (map #(neo/prop % :name)
        (neo/traverse the-one nil nil :knows))
   ;; ("Trinity" "Morpheus" "Cypher" "Agent Smith" "Architect")
-  
+
 ;;; Return every human who does not have his age set. Create a custom returnable evaluator function first:
 
   (defn age-not-present? [pos]
     (and
      (not (:start? pos))                ; eliminate start node
      (not (neo/prop (:node pos) :age))))
-  
+
 ;;; Now find every human without his age set:
 
   (map neo/props (neo/traverse (neo/walk (neo/root) :humans)
                                age-not-present? :human))
   ;; ({:name "Cypher"})
-  
+
 ;;; Return anybody between specified age range. Create custom return evaluator:
 
   (deftype AgeRangeEvaluator [from to]
@@ -862,6 +877,6 @@
                                 :program :out}))
   ;; evals to:
   ;; ({:name "Agent Smith", :language "C++", :age 40}
-  ;;  {:name "Morpheus", :rank "Captain", :age 35})  
+  ;;  {:name "Morpheus", :rank "Captain", :age 35})
 
 )
