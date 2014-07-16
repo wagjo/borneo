@@ -43,7 +43,9 @@
                               Transaction
                               TraversalPosition
                               Traverser$Order)
-	   (org.neo4j.graphdb.factory GraphDatabaseFactory)))
+           (org.neo4j.graphdb.factory GraphDatabaseFactory)
+           (org.neo4j.cypher.javacompat ExecutionEngine)
+           ))
 
 ;;;; Implementation details
 
@@ -51,6 +53,11 @@
            :tag GraphDatabaseService
            :dynamic true}
   *neo-db* nil)
+
+(defonce ^{:doc "Holds an execution engine around the graph database to use for Cypher queries."
+           :tag ExecutionEngine
+           :dynamic true}
+  *exec-eng* nil)
 
 (defn- array?
   "Determines whether x is an array or not."
@@ -238,11 +245,14 @@
 (defn start!
   "Establish a connection to the database.
   Uses *neo-db* Var to hold the connection.
+  Uses *exec-eng* Var to reuse for Cypher queries.
   Do not use this function, use with-db! or with-local-db! instead."
   [path]
   (io!)
-  (let [n (.newEmbeddedDatabase (GraphDatabaseFactory.) path)]
-    (alter-var-root #'*neo-db* (fn [_] n))))
+  (let [n (.newEmbeddedDatabase (GraphDatabaseFactory.) path)
+        ex (ExecutionEngine. n)]
+    (alter-var-root #'*neo-db* (fn [_] n))
+    (alter-var-root #'*exec-eng* (fn [_] ex))))
 
 (defn stop!
   "Closes a connection stored in *neo-db*.
@@ -658,6 +668,15 @@
                  (stop-evaluator stop-eval)
                  (returnable-evaluator return-eval)
                  (rel-dir-map rel)))))
+
+;;; Cypher queries
+
+(defn cypher
+  "Returns lazy-seq of results from query"
+  ([query] (lazy-seq (.execute *exec-eng* query)))
+  ([query params] (lazy-seq (.execute *exec-eng*
+                                      query
+                                      (java.util.HashMap. params)))))
 
 ;;;; Examples
 
