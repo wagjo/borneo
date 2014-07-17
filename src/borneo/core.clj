@@ -489,6 +489,25 @@
    [^Node node label-name]
    (.hasLabel node (dynamic-label label-name)))
 
+(defn add-label!
+  "Adds the given label to the node."
+  [^Node node name]
+  (io!)
+  (with-tx
+    (.addLabel node (dynamic-label name))))
+
+(defn remove-label!
+  "Removes the supplied label from the node."
+  [^Node node name]
+  (io!)
+  (with-tx
+    (.removeLabel node (dynamic-label name))))
+
+(defn labels
+  "Lists all labels attached to this node."
+  [^Node node]
+  (map (fn [^DynamicLabel l] (.name l))
+       (.getLabels node)))
 
 ;;; Nodes
 
