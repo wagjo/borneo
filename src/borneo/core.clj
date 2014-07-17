@@ -45,9 +45,9 @@
                               Transaction
                               TraversalPosition
                               Traverser$Order)
-           (org.neo4j.graphdb.factory GraphDatabaseFactory)
            (org.neo4j.cypher.javacompat ExecutionEngine)
-           ))
+           (org.neo4j.graphdb.factory GraphDatabaseFactory)
+           (org.neo4j.tooling GlobalGraphOperations)))
 
 ;;;; Implementation details
 
@@ -330,8 +330,6 @@
 
 (declare get-id)
 
-(declare root)
-
 (defn purge!
   "Deletes all nodes from database together with all relationships."
   []
@@ -343,10 +341,8 @@
         (delete! r))))
   (with-tx
     ;; now delete nodes, except reference node
-    (let [reference-node-id (get-id (root))]
-      (doseq [node (all-nodes)]
-        (when-not (= reference-node-id (get-id node))
-          (delete! node))))))
+    (doseq [node (all-nodes)]
+      (delete! node))))
 
 ;;; Property Containers
 
@@ -482,15 +478,16 @@
 
 ;;; Labels
 
-(defn label!
+(defn dynamic-label
   "Creates a label with the supplied name"
   [name]
   (DynamicLabel/label name))
 
  (defn label?
-   [^Node node labelName]
-   (with-tx
-     (.hasLabel node (label! labelName))))
+   "Returns true if the given node
+   has a label with the supplied name"
+   [^Node node label-name]
+   (.hasLabel node (dynamic-label label-name)))
 
 
 ;;; Nodes
@@ -565,27 +562,30 @@
 (defn create-node!
   "Creates a new node, not linked with any other nodes.
   Labels can optionally be provided to add to the node."
-  [& labelNames]
+  [& label-names]
   (io!)
   (with-tx
     (.createNode *neo-db*
-                 (into-array Label (map label! labelNames)))))
+                 (into-array Label (map dynamic-label label-names)))))
 
-(declare root)
+
+(defn create-node-with-props!
+  [props & label-names]
+  (with-tx
+    (doto (apply create-node! label-names)
+    (set-props! props))))
 
 (defn create-child!
   "Creates a node that is a child of the specified parent node
-  (or root node) along the specified relationship.
+  along the specified relationship.
   props is a map that defines the properties of the node.
   This is a convenience function."
-  ([type props]
-     (create-child! (root) type props))
-  ([node type props]
+  [node type props]
      (io!)
      (with-tx
        (let [child (create-node! props)]
          (create-rel! node type child)
-         child))))
+         child)))
 
 (defn delete-node!
   "Delete node and all its relationships.
@@ -596,6 +596,16 @@
     (doseq [r (rels node)]
       (delete! r))
     (delete! node)))
+
+(defn find-nodes
+  "Finds nodes with the supplied label and predicate"
+  [label-name key val]
+  (io!)
+  (lazy-seq (.findNodesByLabelAndProperty
+             *neo-db*
+             (dynamic-label label-name)
+             (encode-property-key key)
+             (encode-property-value val))))
 
 
 ;;; Graph traversal helpers
@@ -618,7 +628,13 @@
 (defn all-nodes
   "Returns lazy-seq of all nodes in the db."
   []
-  (lazy-seq (.getAllNodes *neo-db*)))
+  (lazy-seq (.getAllNodes (GlobalGraphOperations/at *neo-db*))))
+
+(defn all-nodes-with-label
+  "Returns lazy-seq of all nodes with the given label."
+  [label-name]
+  (lazy-seq (.getAllNodesWithLabel (GlobalGraphOperations/at *neo-db*)
+                                   (dynamic-label label-name))))
 
 (defn node-by-id
   "Returns node with a given id, or nil if no such node exists.
@@ -635,11 +651,6 @@
   (try
     (.getRelationshipById *neo-db* id)
   (catch NotFoundException e nil)))
-
-(defn root
-  "Returns reference/root node."
-  []
-  (.getReferenceNode *neo-db*))
 
 (defn walk
   "Walks through the graph by following specified relations. Returns last node.

@@ -3,9 +3,14 @@
   (:require [borneo.core :as db])
   (:import (org.neo4j.graphdb GraphDatabaseService)))
 
+(defn- db-path []
+  (.getPath (java.io.File. (System/getProperty "java.io.tmpdir") "borneo")))
 
 (facts "about Neo4j"
-  (db/with-db! "/Users/steve/embedded"
+  (db/with-db! (db-path)
+
+    (db/with-tx
+      (db/purge!) ; purge the database for test consistency.
 
     (fact "*neo-db* holds the current database instance"
       db/*neo-db* =not=> falsey)
@@ -33,7 +38,47 @@
         =not=> falsey))
 
     (fact "Nodes can be created with labels"
-      (let [neo (db/create-node! "Human")]
+      (let [neo (db/create-node! "Human" "TheOne")]
         neo =not=> falsey
         (db/label? neo "Human") => true
-        (db/label? neo "Program") => false))))
+        (db/label? neo "TheOne") => true
+        (db/label? neo "Program") => false
+
+        (fact "Nodes can be assigned properties"
+          (db/set-props! neo {:id 1 :name "Neo"})
+          (db/with-tx
+            (db/prop? neo :id) => true
+            (db/prop? neo :name) => true
+            (db/prop neo :id) => 1
+            (db/prop neo :name) => "Neo"))))
+
+    (fact "Nodes can be created with properties and labels"
+      (let [morpheus (db/create-node-with-props! {:id 2 :name "Morpheus"} "Human")]
+        morpheus =not=> falsey
+        (db/label? morpheus "Human") => true
+        (db/prop morpheus :id) => 2
+        (db/prop morpheus :name) => "Morpheus"))
+
+    (fact "All nodes of a label can be found"
+      (db/with-tx
+        (count (db/all-nodes-with-label "Human")) => 2))
+
+    (fact "Nodes can be found by label and properties"
+      (db/with-tx
+        (let [results (db/find-nodes "Human" :id 1)]
+          (count results) => 1
+          (db/props (first results)) => {:id 1 :name "Neo"})))
+
+
+    (fact "Relationships can be formed between nodes"
+      (db/with-tx)
+        (let [results (db/all-nodes-with-label "Human")
+              neo (first results)
+              morpheus (second results)]
+              (db/prop neo :name) => "Neo"
+              (db/prop morpheus :name) => "Morpheus"
+              (let [rel (db/create-rel! neo :KNOWS morpheus)]
+                rel =not=> falsey
+                (db/start-node rel) => neo
+                (db/end-node rel) => morpheus)
+        )))))
