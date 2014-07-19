@@ -38,7 +38,7 @@
         =not=> falsey))
 
     (fact "Nodes can be created with labels"
-      (let [neo (db/create-node! "Human" "TheOne")]
+      (let [neo (db/create-labeled-node! "Human" "TheOne")]
         neo =not=> falsey
         (db/label? neo "Human") => true
         (db/label? neo "TheOne") => true
@@ -67,7 +67,7 @@
 
 
     (fact "Nodes can be created with properties and labels"
-      (let [morpheus (db/create-node-with-props! {:id 2 :name "Morpheus"} "Human")]
+      (let [morpheus (db/create-node! {:id 2 :name "Morpheus"} "Human")]
         morpheus =not=> falsey
         (db/label? morpheus "Human") => true
         (db/prop morpheus :id) => 2

@@ -578,21 +578,22 @@
   ([^Node node type direction]
      (.getSingleRelationship node (rel-type* type) (rel-dir direction))))
 
-(defn create-node!
-  "Creates a new node, not linked with any other nodes.
-  Labels can optionally be provided to add to the node."
+(defn create-labeled-node!
   [& label-names]
   (io!)
   (with-tx
-    (.createNode *neo-db*
-                 (into-array Label (map dynamic-label label-names)))))
+    (.createNode *neo-db* (into-array Label (map dynamic-label label-names)))))
 
-
-(defn create-node-with-props!
-  [props & label-names]
-  (with-tx
-    (doto (apply create-node! label-names)
-    (set-props! props))))
+(defn create-node!
+  "Creates a new node, not linked with any other nodes.
+  Labels can optionally be provided to add to the node."
+  ([]
+    (io!)
+    (with-tx
+      (.createNode *neo-db*)))
+  ([props & label-names]
+    (doto (apply create-labeled-node! label-names)
+          (set-props! props))))
 
 (defn create-child!
   "Creates a node that is a child of the specified parent node
