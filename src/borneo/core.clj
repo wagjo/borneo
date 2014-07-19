@@ -737,66 +737,72 @@
 
   (purge!)
 
-  (require ['borneo.core :as 'neo])
+  (require ['borneo.core :as 'db])
 
 ;;; Populate database with graph inspired by Neo4j Matrix social graph (for simplicity I do not check if graph already exists):
 
   (do
-    ;; basic layout
-    (def humans (neo/create-child! :humans nil))
-    (def programs (neo/create-child! :programs nil))
-
     ;; add programs
-    (def smith (neo/create-child! programs :program
-                                  {:name "Agent Smith"
-                                   :language "C++"
-                                   :age 40}))
-    (def architect (neo/create-child! programs :program
-                                      {:name "Architect"
-                                       :language "Clojure"
-                                       :age 600}))
+    (def smith (db/create-node-with-props!
+      {:name "Agent Smith"
+      :language "C++"
+      :age 40}
+      "Program"))
+
+    (def architect (db/create-node-with-props!
+      {:name "Architect"
+      :language "Clojure"
+      :age 600}
+      "Program"))
 
     ;; add humans
-    (def the-one (neo/create-child! humans :human
-                                    {:name "Thomas Anderson"
-                                     :age 29}))
-    (def trinity (neo/create-child! humans :human
-                                    {:name "Trinity"
-                                     :age 27}))
-    (def morpheus (neo/create-child! humans :human
-                                     {:name "Morpheus"
-                                      :rank "Captain"
-                                      :age 35}))
-    (def cypher (neo/create-child! humans :human
-                                   {:name "Cypher"}))
+    (def neo (db/create-node-with-props!
+      {:name "Thomas Anderson"
+      :age 29}
+      "Human"))
+
+    (def trinity (db/create-node-with-props!
+      {:name "Trinity"
+      :age 27}
+      "Human"))
+
+    (def morpheus (db/create-node-with-props!
+      {:name "Morpheus"
+      :rank "Captain"
+      :age 35}
+      "Human"))
+
+    (def cypher (db/create-node-with-props!
+      {:name "Cypher"}
+      "Human"))
 
     ;; add relationships
 
-    (neo/create-rel! the-one :knows trinity)
-    (neo/create-rel! the-one :knows morpheus)
-    (neo/create-rel! morpheus :knows trinity)
-    (neo/create-rel! morpheus :knows cypher)
-    (neo/set-props! (neo/create-rel! cypher :knows smith)
+    (db/create-rel! neo :knows trinity)
+    (db/create-rel! neo :knows morpheus)
+    (db/create-rel! morpheus :knows trinity)
+    (db/create-rel! morpheus :knows cypher)
+    (db/set-props! (db/create-rel! cypher :knows smith)
                     {:disclosure "secret"
                      :age 6})
-    (neo/create-rel! smith :knows architect)
-    (neo/create-rel! trinity :loves the-one))
+    (db/create-rel! smith :knows architect)
+    (db/create-rel! trinity :loves neo))
 
 ;;; Basic traversal:
 
 ;;; Assuming I do not have any previous references to nodes.
 ;;; Get me all human nodes:
 
-  (let [humans (neo/walk (neo/root) :humans)]
-    (neo/traverse humans :human))
+  (let [humans (db/walk (db/root) :humans)]
+    (db/traverse humans :human))
   ;; evals to:
   ;; (#<NodeProxy Node[5]> #<NodeProxy Node[6]>
   ;;  #<NodeProxy Node[7]> #<NodeProxy Node[8]>)
 
 ;;; I want to see their properties:
 
-  (let [human-nodes (neo/traverse (neo/walk (neo/root) :humans) :human)]
-    (map neo/props human-nodes))
+  (let [human-nodes (db/traverse (db/walk (db/root) :humans) :human)]
+    (map db/props human-nodes))
   ;; evals to:
   ;; ({:name "Thomas Anderson", :age 29}
   ;;  {:name "Trinity", :age 27}
@@ -805,11 +811,11 @@
 
 ;;; Want to find Mr. Andersons node, assuming I don't have one:
 
-  (def the-one (first (neo/traverse (neo/walk (neo/root) :humans)
+  (def neo (first (db/traverse (db/walk (db/root) :humans)
                                     {:name "Thomas Anderson"}
                                     :human)))
   ;; Or if I want to traverse from root
-  (def the-one (first (neo/traverse (neo/root)
+  (def neo (first (db/traverse (db/root)
                                     {:name "Thomas Anderson"}
                                     {:humans :out
                                      :human :out})))
@@ -818,19 +824,19 @@
 
 ;;; Andersons properties (this fetches all properties and may be resource intensive if node has e.g. large binary properties):
 
-  (neo/props the-one)
+  (db/props neo)
   ;; evals to:
   ;; {:name "Thomas Anderson", :age 29}
 
 ;;; Andersons age:
 
-  (neo/prop the-one :age)
+  (db/prop neo :age)
   ;; evals to:
   ;; 29
 
 ;;; Andersons relationships:
 
-  (neo/rels the-one)
+  (db/rels neo)
   ;; evals to:
   ;; (#<RelationshipProxy Relationship[4]>
   ;;  #<RelationshipProxy Relationship[8]>
@@ -839,40 +845,40 @@
 
 ;;; But I want to see their types:
 
-  (map neo/rel-type (neo/rels the-one))
+  (map db/rel-type (db/rels neo))
   ;; evals to:
   ;; (:human :knows :knows :loves)
 
 ;;; Get :knows or :loves type relationships:
 
-  (neo/rels the-one [:knows :loves])
+  (db/rels neo [:knows :loves])
 
 ;;; Get love relationships only:
 
-  (neo/rels the-one :loves)
+  (db/rels neo :loves)
 
 ;;; Get incoming relationships only:
 
-  (neo/rels the-one nil :in)
+  (db/rels neo nil :in)
 
 ;;; Advanced Traversal
 
 ;;; Who does Anderson know?:
 
-  (map #(neo/prop % :name)
-       (neo/traverse the-one :1 nil :knows))
+  (map #(db/prop % :name)
+       (db/traverse neo :1 nil :knows))
   ;; ("Trinity" "Morpheus")
 
 ;;; Go one level deeper:
 
-  (map #(neo/prop % :name)
-       (neo/traverse the-one :2 nil :knows))
+  (map #(db/prop % :name)
+       (db/traverse neo :2 nil :knows))
   ;; ("Trinity" "Morpheus" "Cypher")
 
 ;;; Go all the way down:
 
-  (map #(neo/prop % :name)
-       (neo/traverse the-one nil nil :knows))
+  (map #(db/prop % :name)
+       (db/traverse neo nil nil :knows))
   ;; ("Trinity" "Morpheus" "Cypher" "Agent Smith" "Architect")
 
 ;;; Return every human who does not have his age set. Create a custom returnable evaluator function first:
@@ -880,26 +886,26 @@
   (defn age-not-present? [pos]
     (and
      (not (:start? pos))                ; eliminate start node
-     (not (neo/prop (:node pos) :age))))
+     (not (db/prop (:node pos) :age))))
 
 ;;; Now find every human without his age set:
 
-  (map neo/props (neo/traverse (neo/walk (neo/root) :humans)
+  (map db/props (db/traverse (db/walk (db/root) :humans)
                                age-not-present? :human))
   ;; ({:name "Cypher"})
 
 ;;; Return anybody between specified age range. Create custom return evaluator:
 
   (deftype AgeRangeEvaluator [from to]
-    neo/ReturnableEvaluator
-    (returnable-node? [this pos] (let [age (neo/prop (:node pos) :age)]
+    db/ReturnableEvaluator
+    (returnable-node? [this pos] (let [age (db/prop (:node pos) :age)]
                                    (when age
                                      (and
                                       (>= age from)
                                       (<= age to))))))
 ;;; Traverse:
 
-  (map neo/props (neo/traverse (neo/root)
+  (map db/props (db/traverse (db/root)
                                (AgeRangeEvaluator. 30 40)
                                {:humans :out
                                 :human :out
