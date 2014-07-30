@@ -1,11 +1,11 @@
 ;; Copyright (C) 2011, Jozef Wagner. All rights reserved.
 ;;
 ;; Disclaimer: Forked from hgavin/clojure-neo4j (no longer available).
-;; 
-;; Disclaimer: Small amount of comments and docs are based on official
-;; Neo4j javadocs. 
 ;;
-;; The use and distribution terms for this software are covered by the 
+;; Disclaimer: Small amount of comments and docs are based on official
+;; Neo4j javadocs.
+;;
+;; The use and distribution terms for this software are covered by the
 ;; Eclipse Public License 1.0
 ;; (http://opensource.org/licenses/eclipse-1.0.php) which can be found
 ;; in the file epl-v10.html at the root of this distribution.
@@ -34,7 +34,9 @@
     In that case just wrap your functions inside with-tx.
   - NullPointerException is thrown if there is no open connection to the db."
   (:import (org.neo4j.graphdb Direction
+                              DynamicLabel
                               GraphDatabaseService
+                              Label
                               Node
                               NotFoundException
                               PropertyContainer
@@ -43,7 +45,9 @@
                               Transaction
                               TraversalPosition
                               Traverser$Order)
-	   (org.neo4j.graphdb.factory GraphDatabaseFactory)))
+           (org.neo4j.cypher.javacompat ExecutionEngine)
+           (org.neo4j.graphdb.factory GraphDatabaseFactory)
+           (org.neo4j.tooling GlobalGraphOperations)))
 
 ;;;; Implementation details
 
@@ -51,6 +55,11 @@
            :tag GraphDatabaseService
            :dynamic true}
   *neo-db* nil)
+
+(defonce ^{:doc "Holds an execution engine around the graph database to use for Cypher queries."
+           :tag ExecutionEngine
+           :dynamic true}
+  *exec-eng* nil)
 
 (defn- array?
   "Determines whether x is an array or not."
@@ -61,8 +70,8 @@
 (defn- encode-property-key
   "Encodes property key. If x is keyword, store its name."
   [value]
-  (if (keyword? value) 
-    (name value) 
+  (if (keyword? value)
+    (name value)
     value))
 
 (defn- decode-property-key
@@ -125,7 +134,7 @@
   be added to the array."
   [r]
   (if (keyword? r)
-    (rel-dir-map {r :out})   
+    (rel-dir-map {r :out})
     (into-array Object
                 (mapcat (fn [[k v]] [(rel-type* k) (rel-dir v)])
                         r))))
@@ -174,7 +183,7 @@
             (stop-evaluator nil)
             (stop-evaluator custom-fn)
   See javadoc for StopEvaluator for more info."
-  [e]  
+  [e]
   (cond
    (or (= :end e) (nil? e)) org.neo4j.graphdb.StopEvaluator/END_OF_GRAPH
    (= :1 e) org.neo4j.graphdb.StopEvaluator/DEPTH_ONE
@@ -238,11 +247,14 @@
 (defn start!
   "Establish a connection to the database.
   Uses *neo-db* Var to hold the connection.
+  Uses *exec-eng* Var to reuse for Cypher queries.
   Do not use this function, use with-db! or with-local-db! instead."
   [path]
   (io!)
-  (let [n (.newEmbeddedDatabase (GraphDatabaseFactory.) path)]
-    (alter-var-root #'*neo-db* (fn [_] n))))
+  (let [n (.newEmbeddedDatabase (GraphDatabaseFactory.) path)
+        ex (ExecutionEngine. n)]
+    (alter-var-root #'*neo-db* (fn [_] n))
+    (alter-var-root #'*exec-eng* (fn [_] ex))))
 
 (defn stop!
   "Closes a connection stored in *neo-db*.
@@ -318,8 +330,6 @@
 
 (declare get-id)
 
-(declare root)
-
 (defn purge!
   "Deletes all nodes from database together with all relationships."
   []
@@ -331,10 +341,8 @@
         (delete! r))))
   (with-tx
     ;; now delete nodes, except reference node
-    (let [reference-node-id (get-id (root))]
-      (doseq [node (all-nodes)]
-        (when-not (= reference-node-id (get-id node))
-          (delete! node))))))
+    (doseq [node (all-nodes)]
+      (delete! node))))
 
 ;;; Property Containers
 
@@ -371,7 +379,7 @@
 
 (defn set-prop!
   "Sets or remove property for a given node or relationship.
-  The property value must be one of the valid property types 
+  The property value must be one of the valid property types
   (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship."
@@ -389,7 +397,7 @@
 
 (defn set-props!
   "Sets properties for a given node or relationship.
-  The property value must be one of the valid property types 
+  The property value must be one of the valid property types
   (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship. This is a convenience function."
@@ -467,6 +475,40 @@
   (lazy-seq
    (.getRelationshipTypes *neo-db*)))
 
+
+;;; Labels
+
+(defn dynamic-label
+  "Creates a label with the supplied name"
+  [name]
+  (DynamicLabel/label name))
+
+ (defn label?
+   "Returns true if the given node
+   has a label with the supplied name"
+   [^Node node label-name]
+   (.hasLabel node (dynamic-label label-name)))
+
+(defn add-label!
+  "Adds the given label to the node."
+  [^Node node name]
+  (io!)
+  (with-tx
+    (.addLabel node (dynamic-label name))))
+
+(defn remove-label!
+  "Removes the supplied label from the node."
+  [^Node node name]
+  (io!)
+  (with-tx
+    (.removeLabel node (dynamic-label name))))
+
+(defn labels
+  "Lists all labels attached to this node."
+  [^Node node]
+  (map (fn [^DynamicLabel l] (.name l))
+       (.getLabels node)))
+
 ;;; Nodes
 
 (defn rel?
@@ -527,7 +569,7 @@
       (nil? direction) (rels node type)
       :else (seq (.getRelationships node (rel-type* type) (rel-dir direction))))))
 
-(defn single-rel 
+(defn single-rel
   "Returns the only relationship for the node of the given type and
   direction.
   Valid directions are :in :out and :both, defaults to :out."
@@ -536,32 +578,34 @@
   ([^Node node type direction]
      (.getSingleRelationship node (rel-type* type) (rel-dir direction))))
 
-(defn create-node!
-  "Creates a new node, not linked with any other nodes."
-  ([]
-     (io!)
-     (with-tx
-       (.createNode *neo-db*)))
-  ([props]
-     (with-tx
-       (doto (create-node!)
-         (set-props! props)))))
+(defn create-labeled-node!
+  [& label-names]
+  (io!)
+  (with-tx
+    (.createNode *neo-db* (into-array Label (map dynamic-label label-names)))))
 
-(declare root)
+(defn create-node!
+  "Creates a new node, not linked with any other nodes.
+  Labels can optionally be provided to add to the node."
+  ([]
+    (io!)
+    (with-tx
+      (.createNode *neo-db*)))
+  ([props & label-names]
+    (doto (apply create-labeled-node! label-names)
+          (set-props! props))))
 
 (defn create-child!
   "Creates a node that is a child of the specified parent node
-  (or root node) along the specified relationship.
+  along the specified relationship.
   props is a map that defines the properties of the node.
   This is a convenience function."
-  ([type props]
-     (create-child! (root) type props))
-  ([node type props]
+  [node type props]
      (io!)
      (with-tx
        (let [child (create-node! props)]
          (create-rel! node type child)
-         child))))
+         child)))
 
 (defn delete-node!
   "Delete node and all its relationships.
@@ -572,6 +616,17 @@
     (doseq [r (rels node)]
       (delete! r))
     (delete! node)))
+
+(defn find-nodes
+  "Finds nodes with the supplied label and predicate"
+  [label-name key val]
+  (io!)
+  (lazy-seq (.findNodesByLabelAndProperty
+             *neo-db*
+             (dynamic-label label-name)
+             (encode-property-key key)
+             (encode-property-value val))))
+
 
 ;;; Graph traversal helpers
 
@@ -593,7 +648,13 @@
 (defn all-nodes
   "Returns lazy-seq of all nodes in the db."
   []
-  (lazy-seq (.getAllNodes *neo-db*)))
+  (lazy-seq (.getAllNodes (GlobalGraphOperations/at *neo-db*))))
+
+(defn all-nodes-with-label
+  "Returns lazy-seq of all nodes with the given label."
+  [label-name]
+  (lazy-seq (.getAllNodesWithLabel (GlobalGraphOperations/at *neo-db*)
+                                   (dynamic-label label-name))))
 
 (defn node-by-id
   "Returns node with a given id, or nil if no such node exists.
@@ -611,11 +672,6 @@
     (.getRelationshipById *neo-db* id)
   (catch NotFoundException e nil)))
 
-(defn root
-  "Returns reference/root node."
-  []
-  (.getReferenceNode *neo-db*))
-
 (defn walk
   "Walks through the graph by following specified relations. Returns last node.
   Throws NullPointerException if path is wrong.
@@ -625,7 +681,7 @@
                     (second (rel-nodes (single-rel node type))))]
     (reduce next-node node types)))
 
-(defn traverse 
+(defn traverse
   "Traverses the graph. Starting at the given node, traverse the graph
   in specified order, stopping based on stop-eval. The return-eval
   decides which nodes make it into the result. The rel is used to
@@ -659,6 +715,15 @@
                  (returnable-evaluator return-eval)
                  (rel-dir-map rel)))))
 
+;;; Cypher queries
+
+(defn cypher
+  "Returns lazy-seq of results from a Cypher query"
+  ([query] (lazy-seq (.execute *exec-eng* query)))
+  ([query params] (lazy-seq (.execute *exec-eng*
+                                      query
+                                      (java.util.HashMap. params)))))
+
 ;;;; Examples
 
 (comment
@@ -673,169 +738,175 @@
 
   (purge!)
 
-  (require ['borneo.core :as 'neo])
+  (require ['borneo.core :as 'db])
 
 ;;; Populate database with graph inspired by Neo4j Matrix social graph (for simplicity I do not check if graph already exists):
 
   (do
-    ;; basic layout
-    (def humans (neo/create-child! :humans nil))
-    (def programs (neo/create-child! :programs nil))
-
     ;; add programs
-    (def smith (neo/create-child! programs :program
-                                  {:name "Agent Smith"
-                                   :language "C++"
-                                   :age 40}))
-    (def architect (neo/create-child! programs :program
-                                      {:name "Architect"
-                                       :language "Clojure"
-                                       :age 600}))
+    (def smith (db/create-node-with-props!
+      {:name "Agent Smith"
+      :language "C++"
+      :age 40}
+      "Program"))
+
+    (def architect (db/create-node-with-props!
+      {:name "Architect"
+      :language "Clojure"
+      :age 600}
+      "Program"))
 
     ;; add humans
-    (def the-one (neo/create-child! humans :human
-                                    {:name "Thomas Anderson"
-                                     :age 29}))
-    (def trinity (neo/create-child! humans :human
-                                    {:name "Trinity"
-                                     :age 27}))
-    (def morpheus (neo/create-child! humans :human
-                                     {:name "Morpheus"
-                                      :rank "Captain"
-                                      :age 35}))
-    (def cypher (neo/create-child! humans :human
-                                   {:name "Cypher"}))
+    (def neo (db/create-node-with-props!
+      {:name "Thomas Anderson"
+      :age 29}
+      "Human"))
+
+    (def trinity (db/create-node-with-props!
+      {:name "Trinity"
+      :age 27}
+      "Human"))
+
+    (def morpheus (db/create-node-with-props!
+      {:name "Morpheus"
+      :rank "Captain"
+      :age 35}
+      "Human"))
+
+    (def cypher (db/create-node-with-props!
+      {:name "Cypher"}
+      "Human"))
 
     ;; add relationships
 
-    (neo/create-rel! the-one :knows trinity)
-    (neo/create-rel! the-one :knows morpheus)
-    (neo/create-rel! morpheus :knows trinity)
-    (neo/create-rel! morpheus :knows cypher)
-    (neo/set-props! (neo/create-rel! cypher :knows smith)
+    (db/create-rel! neo :knows trinity)
+    (db/create-rel! neo :knows morpheus)
+    (db/create-rel! morpheus :knows trinity)
+    (db/create-rel! morpheus :knows cypher)
+    (db/set-props! (db/create-rel! cypher :knows smith)
                     {:disclosure "secret"
                      :age 6})
-    (neo/create-rel! smith :knows architect)
-    (neo/create-rel! trinity :loves the-one))
-  
+    (db/create-rel! smith :knows architect)
+    (db/create-rel! trinity :loves neo))
+
 ;;; Basic traversal:
-  
+
 ;;; Assuming I do not have any previous references to nodes.
 ;;; Get me all human nodes:
 
-  (let [humans (neo/walk (neo/root) :humans)]
-    (neo/traverse humans :human))
+  (let [humans (db/walk (db/root) :humans)]
+    (db/traverse humans :human))
   ;; evals to:
   ;; (#<NodeProxy Node[5]> #<NodeProxy Node[6]>
   ;;  #<NodeProxy Node[7]> #<NodeProxy Node[8]>)
-  
+
 ;;; I want to see their properties:
 
-  (let [human-nodes (neo/traverse (neo/walk (neo/root) :humans) :human)]
-    (map neo/props human-nodes))
+  (let [human-nodes (db/traverse (db/walk (db/root) :humans) :human)]
+    (map db/props human-nodes))
   ;; evals to:
   ;; ({:name "Thomas Anderson", :age 29}
   ;;  {:name "Trinity", :age 27}
   ;;  {:name "Morpheus", :rank "Captain", :age 35}
   ;;  {:name "Cypher"})
-  
+
 ;;; Want to find Mr. Andersons node, assuming I don't have one:
 
-  (def the-one (first (neo/traverse (neo/walk (neo/root) :humans)
+  (def neo (first (db/traverse (db/walk (db/root) :humans)
                                     {:name "Thomas Anderson"}
                                     :human)))
   ;; Or if I want to traverse from root
-  (def the-one (first (neo/traverse (neo/root)
+  (def neo (first (db/traverse (db/root)
                                     {:name "Thomas Anderson"}
                                     {:humans :out
                                      :human :out})))
-  
+
 ;;; Properties and Relationships:
 
 ;;; Andersons properties (this fetches all properties and may be resource intensive if node has e.g. large binary properties):
 
-  (neo/props the-one)
+  (db/props neo)
   ;; evals to:
   ;; {:name "Thomas Anderson", :age 29}
-  
+
 ;;; Andersons age:
 
-  (neo/prop the-one :age)
+  (db/prop neo :age)
   ;; evals to:
   ;; 29
-  
+
 ;;; Andersons relationships:
 
-  (neo/rels the-one)
+  (db/rels neo)
   ;; evals to:
   ;; (#<RelationshipProxy Relationship[4]>
   ;;  #<RelationshipProxy Relationship[8]>
   ;;  #<RelationshipProxy Relationship[9]>
   ;;  #<RelationshipProxy Relationship[14]>)
-  
+
 ;;; But I want to see their types:
 
-  (map neo/rel-type (neo/rels the-one))
+  (map db/rel-type (db/rels neo))
   ;; evals to:
   ;; (:human :knows :knows :loves)
-  
+
 ;;; Get :knows or :loves type relationships:
 
-  (neo/rels the-one [:knows :loves])
-  
+  (db/rels neo [:knows :loves])
+
 ;;; Get love relationships only:
 
-  (neo/rels the-one :loves)
-  
+  (db/rels neo :loves)
+
 ;;; Get incoming relationships only:
 
-  (neo/rels the-one nil :in)
-  
+  (db/rels neo nil :in)
+
 ;;; Advanced Traversal
 
 ;;; Who does Anderson know?:
 
-  (map #(neo/prop % :name)
-       (neo/traverse the-one :1 nil :knows))
+  (map #(db/prop % :name)
+       (db/traverse neo :1 nil :knows))
   ;; ("Trinity" "Morpheus")
-  
+
 ;;; Go one level deeper:
 
-  (map #(neo/prop % :name)
-       (neo/traverse the-one :2 nil :knows))
+  (map #(db/prop % :name)
+       (db/traverse neo :2 nil :knows))
   ;; ("Trinity" "Morpheus" "Cypher")
-  
+
 ;;; Go all the way down:
 
-  (map #(neo/prop % :name)
-       (neo/traverse the-one nil nil :knows))
+  (map #(db/prop % :name)
+       (db/traverse neo nil nil :knows))
   ;; ("Trinity" "Morpheus" "Cypher" "Agent Smith" "Architect")
-  
+
 ;;; Return every human who does not have his age set. Create a custom returnable evaluator function first:
 
   (defn age-not-present? [pos]
     (and
      (not (:start? pos))                ; eliminate start node
-     (not (neo/prop (:node pos) :age))))
-  
+     (not (db/prop (:node pos) :age))))
+
 ;;; Now find every human without his age set:
 
-  (map neo/props (neo/traverse (neo/walk (neo/root) :humans)
+  (map db/props (db/traverse (db/walk (db/root) :humans)
                                age-not-present? :human))
   ;; ({:name "Cypher"})
-  
+
 ;;; Return anybody between specified age range. Create custom return evaluator:
 
   (deftype AgeRangeEvaluator [from to]
-    neo/ReturnableEvaluator
-    (returnable-node? [this pos] (let [age (neo/prop (:node pos) :age)]
+    db/ReturnableEvaluator
+    (returnable-node? [this pos] (let [age (db/prop (:node pos) :age)]
                                    (when age
                                      (and
                                       (>= age from)
                                       (<= age to))))))
 ;;; Traverse:
 
-  (map neo/props (neo/traverse (neo/root)
+  (map db/props (db/traverse (db/root)
                                (AgeRangeEvaluator. 30 40)
                                {:humans :out
                                 :human :out
@@ -843,6 +914,6 @@
                                 :program :out}))
   ;; evals to:
   ;; ({:name "Agent Smith", :language "C++", :age 40}
-  ;;  {:name "Morpheus", :rank "Captain", :age 35})  
+  ;;  {:name "Morpheus", :rank "Captain", :age 35})
 
 )

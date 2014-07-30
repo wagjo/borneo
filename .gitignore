@@ -7,3 +7,4 @@ autodoc
 test-db
 target
 .lein-failures
+.lein-repl-history
