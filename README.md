@@ -91,7 +91,7 @@ about this approach yet. More hammock time needed.
 
 Add the following dependency to your project.clj file:
 
-    [borneo "0.4.0"]
+    [borneo "0.5.0"]
 
 ## Documentation
 
@@ -102,6 +102,7 @@ emphasized):
 
 * _Database management_
   * _[\*neo-db\*](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/*neo-db*)_ holds current database instance
+  * _[\*exec-eng\*](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/*exec-eng*)_ holds instance of execution engine
   * _[start!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/start!)_ establishes a connection to the database
   * _[stop!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/stop!)_ closes a connection stored in \*neo-db\*
   * ___[with-db!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/with-db!)_ establishes a connection to the database__
@@ -127,23 +128,33 @@ emphasized):
   * ___[rel-type](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/rel-type)_ returns type of given relationship__
   * ___[create-rel!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/create-rel!)_ creates relationship between two nodes__
   * _[all-rel-types](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/all-rel-types)_ returns lazy seq of all relationship types in database
+* _Labels_
+  * _[dynamic-label](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/dynamic-label)_ creates a label with the supplied name
+  * _[label?](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/label?)_ returns true if the given node has a label with the supplied name
+  * _[add-label!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/addlabel!)_ adds the given label to the node
+  * _[remove-label!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/remove-label!)_ removes the supplied label from the node
+  * _[labels](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/labels)_ lists all labels attached to this node
 * _Nodes_
   * _[rel?](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/rel?)_ returns true if node has given relationship(s)
   * ___[rels](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/rels)_ returns relationships attached to given node__
   * _[single-rel](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/single-rel)_ returns single relationship for given node
-  * _[create-node!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/create-node!)_ creates new node, not linked with any other nodes
+  * _[create-labeled-node!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/create-labeled-node!)_ creates new labeled node, not linked with any other nodes
+  * _[create-node!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/create-node!)_ creates new node, not linked with any other nodes. Labels may be provided as an optional arguments.
   * ___[create-child!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/create-child!)_ creates a child node of a given parent__
   * ___[delete-node!](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/delete-node!)_ deletes node and all its relationships__
+  * _[find-nodes](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/find-nodes)_ finds nodes with the supplied label and predicate.
 * _Graph traversal protocols_
   * _[ReturnableEvaluator](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/ReturnableEvaluator)_ protocol for return evaluation. Used for graph traversing.
   * _[StopEvaluator](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/StopEvaluator)_ protocol for stop evaluation. Used for graph traversing.
 * _Graph traversal_
   * _[all-nodes](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/all-nodes)_ returns lazy-seq of all nodes in database
+  * _[all-nodes-with-label](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/all-nodes-with-label)_ returns lazy-seq of all nodes with the given label
   * _[node-by-id](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/node-by-id)_ returns node with a given id
   * _[rel-by-id](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/rel-by-id)_ returns relationship with a given id
-  * ___[root](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/root)_ returns root/reference node__
   * ___[walk](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/walk)_ walks though the graph by following through given single relations__
   * ___[traverse](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/traverse)_ traverses the graph__
+* _Cypher queries_
+  * _[cypher](http://wagjo.github.com/borneo/borneo.core-api.html#borneo.core/cypher)_ returns lazy-seq of results from a Cypher query
 
 ## Examples
 
@@ -151,6 +162,8 @@ Following examples show basic borneo functions. Code presented here is
 not meant to be an idiomatic clojure code, e.g. you should wrap most
 of your operations in separate functions, and use let instead of def
 to store a reference to a node.
+
+NOTE: Following examples are out of date (for version 0.4). Pull request for up to date example is welcomed.
 
 ### Basic usage
 
@@ -360,7 +373,7 @@ longer available)
 Disclaimer: Small amount of comments and docs are based on official
 Neo4j javadocs. 
 
-Copyright (C) 2011, Jozef Wagner. All rights reserved.
+Copyright (C) 2011, 2014, Jozef Wagner and contributors. All rights reserved.
 
 The use and distribution terms for this software are covered by the
 Eclipse Public License 1.0 ([http://opensource.org/licenses/eclipse-1.0.php](http://opensource.org/licenses/eclipse-1.0.php))
