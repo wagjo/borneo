@@ -309,7 +309,7 @@
        (finally (stop!))))))
 
 (defmacro with-tx
-  "Establish a transaction with the database refered to by kw. Use it for mutable db operations.
+  "Establish a transaction with the database db. Use it for mutable db operations.
   If you do not want to commit it, throw an exception.
   All mutable functions use transactions by default, so you don't
   have to use this macro. You should use this macro to group your
