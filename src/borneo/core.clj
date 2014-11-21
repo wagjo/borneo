@@ -54,12 +54,14 @@
 (defonce ^{:doc "Holds the current database instance."
            :tag GraphDatabaseService
            :dynamic true}
-  *neo-db* nil)
+  *neo-db* {})
 
-(defonce ^{:doc "Holds an execution engine around the graph database to use for Cypher queries."
-           :tag ExecutionEngine
-           :dynamic true}
-  *exec-eng* nil)
+(comment
+  ; no longer being used
+  (defonce ^{:doc "Holds an execution engine around the graph database to use for Cypher queries."
+             :tag ExecutionEngine
+             :dynamic true}
+    *exec-eng* nil))
 
 (defn- array?
   "Determines whether x is an array or not."
@@ -242,44 +244,57 @@
    (= :all e) org.neo4j.graphdb.ReturnableEvaluator/ALL
    :else (returnable-with-protocol e)))
 
+
+(defn conn-utils
+  "Responsible for establishing a connection to the database located at path and intializing utilities."
+  [path]
+  (#(assoc {}
+             :db %
+             :exec-eng (ExecutionEngine. %)
+             :idx-mgr (.index %))
+          (.newEmbeddedDatabase (GraphDatabaseFactory.) path)))
+
 ;;;; Public API
 
 (defn start!
   "Establish a connection to the database.
-  Uses *neo-db* Var to hold the connection.
-  Uses *exec-eng* Var to reuse for Cypher queries.
+  /-Uses *neo-db* Var to hold the connection.-/
+  /-Uses *exec-eng* Var to reuse for Cypher queries.-/
+  Associates a map with database connection and utilities to the keyword kw in var *neo-db*
   Do not use this function, use with-db! or with-local-db! instead."
-  [path]
+  [kw path]
   (io!)
-  (let [n (.newEmbeddedDatabase (GraphDatabaseFactory.) path)
-        ex (ExecutionEngine. n)]
-    (alter-var-root #'*neo-db* (fn [_] n))
-    (alter-var-root #'*exec-eng* (fn [_] ex))))
+  (alter-var-root #'*neo-db* (fn [m] (assoc m kw (conn-utils path)))))
 
 (defn stop!
-  "Closes a connection stored in *neo-db*.
+  "Closes a connection associated to kw stored in *neo-db*.
   Do not use this function, use with-db! or with-local-db! instead."
-  []
+  [kw]
   (io!)
-  (.shutdown *neo-db*))
+  (.shutdown (-> *neo-db* kw :db))
+  (alter-var-root #'*neo-db* (fn [m] (dissoc m kw))))
 
-(defmacro with-db!
+(comment
+  ; These do not work.
+  ; Is this just for statelessness?
+  ; Would a function be more effective?
+  (defmacro with-db!
   "Establish a connection to the neo db.
   Because there is an overhead when establishing connection, users should
   not call this macro often. Also note that this macro is not threadsafe."
-  [path & body]
+  [kw path & body]
   (io!)
   `(do
      ;; Not using binding macro, because db should be accessible
      ;; from multiple threads.
-     (start! ~path)
+     (start! ~kw ~path)
      (try
        ~@body
-       (finally (stop!)))))
+       (finally (stop! kw)))))
 
-(defmacro with-local-db!
+  (defmacro with-local-db!
   "Establish a connection to the neo db. Connection is visible
-  only in current thread. Because there is an overhead when
+  only in current thread, and is given the keyword :local in map *neo-db*. Because there is an overhead when
   establishing connection, users should not call this macro often.
   This is a treadsafe version, which limits connection to
   the current thread only. This allows you to have parallel
@@ -288,19 +303,19 @@
   [path & body]
   (io!)
   ;; Using binding macro, db is accessible only in this thread
-  `(binding [*neo-db* (.newEmbeddedDatabase (GraphDatabaseFactory.) path)]
+  `(binding [*neo-db* '~(assoc *neo-db* :local (conn-utils path))]
      (try
        ~@body
-       (finally (stop!)))))
+       (finally (stop!))))))
 
 (defmacro with-tx
-  "Establish a transaction. Use it for mutable db operations.
+  "Establish a transaction with the database db. Use it for mutable db operations.
   If you do not want to commit it, throw an exception.
   All mutable functions use transactions by default, so you don't
   have to use this macro. You should use this macro to group your
   functions into a bigger transactions."
-  [& body]
-  `(let [tx# (.beginTx *neo-db*)]
+  [db & body]
+  `(let [tx# (.beginTx ~db)]
      (try
        (let [val# (do ~@body)]
          (.success tx#)
@@ -308,19 +323,19 @@
        (finally (.finish tx#)))))
 
 (defn get-path
-  "Returns path to where the database is stored."
-  []
-  (.getStoreDir *neo-db*))
+  "Returns path to where the database referred to by kw is stored."
+  [kw]
+  (.getStoreDir (-> *neo-db* kw :db)))
 
 (defn read-only?
-  "Returns true if database is read only."
-  []
-  (.isReadOnly *neo-db*))
+  "Returns true if database referred to by kw is read only."
+  [kw]
+  (.isReadOnly (-> *neo-db* kw :db)))
 
 (defn index
-  "Returns the IndexManager paired with this graph database service."
-  []
-  (.index *neo-db*))
+  "Returns the IndexManager paired with this graph database service referred to by kw."
+  [kw]
+  (.index (-> *neo-db* kw :db)))
 
 (declare all-nodes)
 
@@ -329,17 +344,17 @@
 (declare delete!)
 
 (declare get-id)
-
+  
 (defn purge!
-  "Deletes all nodes from database together with all relationships."
-  []
+  "Deletes all nodes from database referred to by kw together with all relationships."
+  [kw]
   (io!)
   ;; first delete all relationships
   (doseq [node (all-nodes)]
-    (with-tx
+    (with-tx (-> *neo-db* kw :db)
       (doseq [r (rels node)]
         (delete! r))))
-  (with-tx
+  (with-tx (-> *neo-db* kw :db)
     ;; now delete nodes, except reference node
     (doseq [node (all-nodes)]
       (delete! node))))
@@ -383,11 +398,11 @@
   (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship."
-  ([^PropertyContainer c key]
-     (set-prop! c key nil))
-  ([^PropertyContainer c key value]
+  ([kw ^PropertyContainer c key]
+     (set-prop! kw c key nil))
+  ([kw ^PropertyContainer c key value]
      (io!)
-     (with-tx
+     (with-tx (-> *neo-db* kw :db)
        (if (not (nil? value))
          (.setProperty c (encode-property-key key)
                        (if (coll? value) ; handle multiple values
@@ -401,11 +416,11 @@
   (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship. This is a convenience function."
-  [^PropertyContainer c props]
+  [kw ^PropertyContainer c props]
   (io!)
-  (with-tx
+  (with-tx (-> *neo-db* kw :db)
     (doseq [[k v] props]
-      (set-prop! c k v))))
+      (set-prop! kw c k v))))
 
 (defn get-id
   "Returns id for a given node or relationship.
@@ -416,9 +431,9 @@
 (defn delete!
   "Deletes node or relationship.
   Only node which has no relationships attached to it can be deleted."
-  [item]
+  [kw item]
   (io!)
-  (with-tx
+  (with-tx (-> *neo-db* kw :db)
     (.delete item)))
 
 ;;; Relationships
@@ -464,16 +479,16 @@
 
 (defn create-rel!
   "Creates relationship of a supplied type between from and to nodes."
-  [^Node from type ^Node to]
+  [kw ^Node from type ^Node to]
   (io!)
-  (with-tx
+  (with-tx (-> *neo-db* kw :db)
     (.createRelationshipTo from to (rel-type* type))))
 
 (defn all-rel-types
-  "Returns lazy seq of all relationship types currently in database."
-  []
+  "Returns lazy seq of all relationship types currently in database referred to by kw."
+  [kw]
   (lazy-seq
-   (.getRelationshipTypes *neo-db*)))
+   (.getRelationshipTypes (-> *neo-db* kw :db))))
 
 
 ;;; Labels
@@ -491,16 +506,16 @@
 
 (defn add-label!
   "Adds the given label to the node."
-  [^Node node name]
+  [kw ^Node node name]
   (io!)
-  (with-tx
+  (with-tx (-> *neo-db* kw :db)
     (.addLabel node (dynamic-label name))))
 
 (defn remove-label!
   "Removes the supplied label from the node."
-  [^Node node name]
+  [kw ^Node node name]
   (io!)
-  (with-tx
+  (with-tx (-> *neo-db* kw :db)
     (.removeLabel node (dynamic-label name))))
 
 (defn labels
@@ -579,20 +594,20 @@
      (.getSingleRelationship node (rel-type* type) (rel-dir direction))))
 
 (defn create-labeled-node!
-  [& label-names]
+  [kw & label-names]
   (io!)
-  (with-tx
-    (.createNode *neo-db* (into-array Label (map dynamic-label label-names)))))
+  (with-tx (-> *neo-db* kw :db)
+    (.createNode (-> *neo-db* kw :db) (into-array Label (map dynamic-label label-names)))))
 
 (defn create-node!
   "Creates a new node, not linked with any other nodes.
   Labels can optionally be provided to add to the node."
-  ([]
+  ([kw]
     (io!)
-    (with-tx
-      (.createNode *neo-db*)))
-  ([props & label-names]
-    (doto (apply create-labeled-node! label-names)
+    (with-tx (-> *neo-db* kw :db)
+      (.createNode (-> *neo-db* kw :db))))
+  ([kw props & label-names]
+     (doto (apply create-labeled-node! (cons kw label-names))
           (set-props! props))))
 
 (defn create-child!
@@ -600,9 +615,9 @@
   along the specified relationship.
   props is a map that defines the properties of the node.
   This is a convenience function."
-  [node type props]
+  [kw ^Node node type props]
      (io!)
-     (with-tx
+     (with-tx (-> *neo-db* kw :db)
        (let [child (create-node! props)]
          (create-rel! node type child)
          child)))
@@ -610,19 +625,19 @@
 (defn delete-node!
   "Delete node and all its relationships.
   This is a convenience function."
-  [node]
+  [kw node]
   (io!)
-  (with-tx
+  (with-tx (-> *neo-db* kw :db)
     (doseq [r (rels node)]
       (delete! r))
     (delete! node)))
 
 (defn find-nodes
-  "Finds nodes with the supplied label and predicate"
-  [label-name key val]
+  "Finds nodes in the database referred to by kw with the supplied label and predicate"
+  [kw label-name key val]
   (io!)
   (lazy-seq (.findNodesByLabelAndProperty
-             *neo-db*
+             (-> *neo-db* kw :db)
              (dynamic-label label-name)
              (encode-property-key key)
              (encode-property-value val))))
@@ -647,29 +662,29 @@
 
 (defn all-nodes
   "Returns lazy-seq of all nodes in the db."
-  []
-  (lazy-seq (.getAllNodes (GlobalGraphOperations/at *neo-db*))))
+  [kw]
+  (lazy-seq (.getAllNodes (GlobalGraphOperations/at (-> *neo-db* kw :db)))))
 
 (defn all-nodes-with-label
   "Returns lazy-seq of all nodes with the given label."
-  [label-name]
-  (lazy-seq (.getAllNodesWithLabel (GlobalGraphOperations/at *neo-db*)
+  [kw label-name]
+  (lazy-seq (.getAllNodesWithLabel (GlobalGraphOperations/at (-> *neo-db* kw :db))
                                    (dynamic-label label-name))))
 
 (defn node-by-id
   "Returns node with a given id, or nil if no such node exists.
   Note that ids are not very good as unique identifiers."
-  [id]
+  [kw id]
   (try
-    (.getNodeById *neo-db* id)
+    (.getNodeById (-> *neo-db* kw :db) id)
   (catch NotFoundException e nil)))
 
 (defn rel-by-id
   "Returns relationship with a given id, or nil if no such relationship exists.
   Note that ids are not very good as unique identifiers."
-  [id]
+  [kw id]
   (try
-    (.getRelationshipById *neo-db* id)
+    (.getRelationshipById (-> *neo-db* kw :db) id)
   (catch NotFoundException e nil)))
 
 (defn walk
@@ -719,8 +734,8 @@
 
 (defn cypher
   "Returns lazy-seq of results from a Cypher query"
-  ([query] (lazy-seq (.execute *exec-eng* query)))
-  ([query params] (lazy-seq (.execute *exec-eng*
+  ([kw query] (lazy-seq (.execute (-> *neo-db* kw :exec-eng) query)))
+  ([kw query params] (lazy-seq (.execute (-> *neo-db* kw :exec-eng)
                                       query
                                       (java.util.HashMap. params)))))
 
@@ -730,13 +745,13 @@
 
 ;;; See README for usage instructions, documentation and examples.
 
-  (start! "test-db")
+  (start! :test-db "test-db")
 
-  (all-nodes)
+  (all-nodes :test-db)
 
-  (stop!)
+  (stop! :test-db)
 
-  (purge!)
+  (purge! :test-db)
 
   (require ['borneo.core :as 'db])
 
@@ -744,36 +759,36 @@
 
   (do
     ;; add programs
-    (def smith (db/create-node-with-props!
+    (def smith (db/create-node-with-props! :test-db
       {:name "Agent Smith"
       :language "C++"
       :age 40}
       "Program"))
 
-    (def architect (db/create-node-with-props!
+    (def architect (db/create-node-with-props! :test-db
       {:name "Architect"
       :language "Clojure"
       :age 600}
       "Program"))
 
     ;; add humans
-    (def neo (db/create-node-with-props!
+    (def neo (db/create-node-with-props! :test-db
       {:name "Thomas Anderson"
       :age 29}
       "Human"))
 
-    (def trinity (db/create-node-with-props!
+    (def trinity (db/create-node-with-props! :test-db
       {:name "Trinity"
       :age 27}
       "Human"))
 
-    (def morpheus (db/create-node-with-props!
+    (def morpheus (db/create-node-with-props! :test-db
       {:name "Morpheus"
       :rank "Captain"
       :age 35}
       "Human"))
 
-    (def cypher (db/create-node-with-props!
+    (def cypher (db/create-node-with-props! :test-db
       {:name "Cypher"}
       "Human"))
 
