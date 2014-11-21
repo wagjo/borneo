@@ -271,9 +271,14 @@
   Do not use this function, use with-db! or with-local-db! instead."
   [kw]
   (io!)
-  (.shutdown (-> *neo-db* kw :db)))
+  (.shutdown (-> *neo-db* kw :db))
+  (alter-var-root #'*neo-db* (fn [m] (dissoc m kw))))
 
-(defmacro with-db!
+(comment
+  ; These do not work.
+  ; Is this just for statelessness?
+  ; Would a function be more effective?
+  (defmacro with-db!
   "Establish a connection to the neo db.
   Because there is an overhead when establishing connection, users should
   not call this macro often. Also note that this macro is not threadsafe."
@@ -282,12 +287,12 @@
   `(do
      ;; Not using binding macro, because db should be accessible
      ;; from multiple threads.
-     (start! kw ~path)
+     (start! ~kw ~path)
      (try
        ~@body
        (finally (stop! kw)))))
 
-(defmacro with-local-db!
+  (defmacro with-local-db!
   "Establish a connection to the neo db. Connection is visible
   only in current thread, and is given the keyword :local in map *neo-db*. Because there is an overhead when
   establishing connection, users should not call this macro often.
@@ -298,10 +303,10 @@
   [path & body]
   (io!)
   ;; Using binding macro, db is accessible only in this thread
-  `(binding [*neo-db* (assoc *neo-db* :local '~(conn-utils path))]
+  `(binding [*neo-db* '~(assoc *neo-db* :local (conn-utils path))]
      (try
        ~@body
-       (finally (stop!)))))
+       (finally (stop!))))))
 
 (defmacro with-tx
   "Establish a transaction with the database refered to by kw. Use it for mutable db operations.
