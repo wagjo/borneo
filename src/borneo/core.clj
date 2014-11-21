@@ -264,7 +264,7 @@
   Do not use this function, use with-db! or with-local-db! instead."
   [kw path]
   (io!)
-  (alter-var-root #'*neo-db* (assoc m kw (conn-utils path))))
+  (alter-var-root #'*neo-db* (fn [m] (assoc m kw (conn-utils path)))))
 
 (defn stop!
   "Closes a connection associated to kw stored in *neo-db*.
@@ -282,10 +282,10 @@
   `(do
      ;; Not using binding macro, because db should be accessible
      ;; from multiple threads.
-     (start! ~path)
+     (start! kw ~path)
      (try
        ~@body
-       (finally (stop!)))))
+       (finally (stop! kw)))))
 
 (defmacro with-local-db!
   "Establish a connection to the neo db. Connection is visible
@@ -390,15 +390,15 @@
   (let [keys (.getPropertyKeys c)
         convert-fn (fn [k] [(keyword k) (prop c k)])]
     (into {} (map convert-fn keys))))
-(comment
-  (defn set-prop!
+
+(defn set-prop!
   "Sets or remove property for a given node or relationship.
   The property value must be one of the valid property types
   (see Neo4j docs) or a keyword.
   If a property value is nil, removes this property from the given
   node or relationship."
   ([kw ^PropertyContainer c key]
-     (set-prop! c key nil))
+     (set-prop! kw c key nil))
   ([kw ^PropertyContainer c key value]
      (io!)
      (with-tx kw
@@ -407,7 +407,7 @@
                        (if (coll? value) ; handle multiple values
                          (into-array (map encode-property-value value))
                          (encode-property-value value)))
-         (.removeProperty c (encode-property-key key)))))))
+         (.removeProperty c (encode-property-key key))))))
 
 (defn set-props!
   "Sets properties for a given node or relationship.
@@ -419,7 +419,7 @@
   (io!)
   (with-tx kw
     (doseq [[k v] props]
-      (set-prop! c k v))))
+      (set-prop! kw c k v))))
 
 (defn get-id
   "Returns id for a given node or relationship.
