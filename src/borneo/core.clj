@@ -289,7 +289,7 @@
 
 (defmacro with-local-db!
   "Establish a connection to the neo db. Connection is visible
-  only in current thread. Because there is an overhead when
+  only in current thread, and is given the keyword :local in map *neo-db*. Because there is an overhead when
   establishing connection, users should not call this macro often.
   This is a treadsafe version, which limits connection to
   the current thread only. This allows you to have parallel
@@ -298,11 +298,7 @@
   [path & body]
   (io!)
   ;; Using binding macro, db is accessible only in this thread
-  `(binding [*neo-db* (assoc *neo-db* :local '~(#(assoc {}
-                                                 :db %
-                                                 :exec-eng (ExecutionEngine. %)
-                                                 :idx-mgr (.index %))
-                                              (.newEmbeddedDatabase (GraphDatabaseFactory.) path)))]
+  `(binding [*neo-db* (assoc *neo-db* :local '~(conn-utils path))]
      (try
        ~@body
        (finally (stop!)))))
