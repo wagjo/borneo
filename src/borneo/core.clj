@@ -314,8 +314,8 @@
   All mutable functions use transactions by default, so you don't
   have to use this macro. You should use this macro to group your
   functions into a bigger transactions."
-  [kw & body]
-  `(let [tx# (.beginTx '~(-> *neo-db* kw :db))]
+  [db & body]
+  `(let [tx# (.beginTx ~db)]
      (try
        (let [val# (do ~@body)]
          (.success tx#)
@@ -351,10 +351,10 @@
   (io!)
   ;; first delete all relationships
   (doseq [node (all-nodes)]
-    (with-tx kw
+    (with-tx (-> *neo-db* kw :db)
       (doseq [r (rels node)]
         (delete! r))))
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     ;; now delete nodes, except reference node
     (doseq [node (all-nodes)]
       (delete! node))))
@@ -402,7 +402,7 @@
      (set-prop! kw c key nil))
   ([kw ^PropertyContainer c key value]
      (io!)
-     (with-tx kw
+     (with-tx (-> *neo-db* kw :db)
        (if (not (nil? value))
          (.setProperty c (encode-property-key key)
                        (if (coll? value) ; handle multiple values
@@ -418,7 +418,7 @@
   node or relationship. This is a convenience function."
   [kw ^PropertyContainer c props]
   (io!)
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     (doseq [[k v] props]
       (set-prop! kw c k v))))
 
@@ -433,7 +433,7 @@
   Only node which has no relationships attached to it can be deleted."
   [kw item]
   (io!)
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     (.delete item)))
 
 ;;; Relationships
@@ -481,7 +481,7 @@
   "Creates relationship of a supplied type between from and to nodes."
   [kw ^Node from type ^Node to]
   (io!)
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     (.createRelationshipTo from to (rel-type* type))))
 
 (defn all-rel-types
@@ -508,14 +508,14 @@
   "Adds the given label to the node."
   [kw ^Node node name]
   (io!)
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     (.addLabel node (dynamic-label name))))
 
 (defn remove-label!
   "Removes the supplied label from the node."
   [kw ^Node node name]
   (io!)
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     (.removeLabel node (dynamic-label name))))
 
 (defn labels
@@ -596,7 +596,7 @@
 (defn create-labeled-node!
   [kw & label-names]
   (io!)
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     (.createNode (-> *neo-db* kw :db) (into-array Label (map dynamic-label label-names)))))
 
 (defn create-node!
@@ -604,7 +604,7 @@
   Labels can optionally be provided to add to the node."
   ([kw]
     (io!)
-    (with-tx kw
+    (with-tx (-> *neo-db* kw :db)
       (.createNode (-> *neo-db* kw :db))))
   ([kw props & label-names]
      (doto (apply create-labeled-node! (cons kw label-names))
@@ -617,7 +617,7 @@
   This is a convenience function."
   [kw ^Node node type props]
      (io!)
-     (with-tx kw
+     (with-tx (-> *neo-db* kw :db)
        (let [child (create-node! props)]
          (create-rel! node type child)
          child)))
@@ -627,7 +627,7 @@
   This is a convenience function."
   [kw node]
   (io!)
-  (with-tx kw
+  (with-tx (-> *neo-db* kw :db)
     (doseq [r (rels node)]
       (delete! r))
     (delete! node)))
